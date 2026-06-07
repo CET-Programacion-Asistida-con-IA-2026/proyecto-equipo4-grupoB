@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cerca — Recursos de salud</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+  <!-- ══════════════════════ HOME ══════════════════════ -->
+  <section class="pantalla activa" id="pantalla-home">
+    <div class="home-layout">
+
+      <header class="home-header">
+        <div class="header-inner">
+          <div class="header-top">
+            <div class="logo">
+              <span class="logo-icono">＋</span>
+              <span class="logo-texto">cerca</span>
+            </div>
+            <button class="toggle-tema" id="toggleTema" aria-label="Cambiar modo">
+              <span class="icono-tema">☀️</span>
+            </button>
+          </div>
+
+          <div class="header-search-wrap">
+            <h1 class="header-titulo">¿Qué necesitás<br><em>ahora?</em></h1>
+            <p class="header-sub">Encontrá recursos, guardias y ayuda rápido.</p>
+          </div>
+        </div>
+      </header>
+
+      <!-- Categorías -->
+      <main class="home-main">
+        <div class="main-inner">
+
+          <!-- Urgencias — full width, destacada -->
+          <button class="cat-card cat-urgencia" data-destino="pantalla-urgencias">
+            <div class="cat-left">
+              <div class="cat-icono-wrap">
+                <span class="cat-icono">🚨</span>
+              </div>
+              <div class="cat-info">
+                <span class="cat-titulo">Urgencias</span>
+                <span class="cat-desc">Guardias 24hs · Emergencias · Violencia</span>
+              </div>
+            </div>
+            <span class="cat-flecha">›</span>
+          </button>
+
+          <!-- Grid 2 columnas -->
+          <div class="cat-grid">
+
+            <button class="cat-card cat-fisica" data-destino="pantalla-fisica">
+              <div class="cat-icono-wrap">
+                <span class="cat-icono">🩺</span>
+              </div>
+              <div class="cat-info">
+                <span class="cat-titulo">Salud física</span>
+                <span class="cat-desc">Dolor · Fiebre · Síntomas</span>
+              </div>
+              <span class="cat-flecha">›</span>
+            </button>
+
+            <button class="cat-card cat-mental" data-destino="pantalla-mental">
+              <div class="cat-icono-wrap">
+                <span class="cat-icono">🧠</span>
+              </div>
+              <div class="cat-info">
+                <span class="cat-titulo">Salud mental</span>
+                <span class="cat-desc">Ansiedad · Estrés · Crisis</span>
+              </div>
+              <span class="cat-flecha">›</span>
+            </button>
+
+            <button class="cat-card cat-mascotas" data-destino="pantalla-mascotas">
+              <div class="cat-icono-wrap">
+                <span class="cat-icono">🐾</span>
+              </div>
+              <div class="cat-info">
+                <span class="cat-titulo">Mascotas</span>
+                <span class="cat-desc">Vet. guardia · Primeros auxilios</span>
+              </div>
+              <span class="cat-flecha">›</span>
+            </button>
+
+            <button class="cat-card cat-centros" data-destino="pantalla-centros">
+              <div class="cat-icono-wrap">
+                <span class="cat-icono">📍</span>
+              </div>
+              <div class="cat-info">
+                <span class="cat-titulo">Centros cercanos</span>
+                <span class="cat-desc">Hospitales · CAPS · Farmacias</span>
+              </div>
+              <span class="cat-flecha">›</span>
+            </button>
+
+          </div>
+
+          <!-- Acceso rápido -->
+          <p class="seccion-label">Acceso rápido</p>
+          <div class="rapido-grid">
+
+            <button class="rapido-card" data-destino="pantalla-urgencias">
+              <span class="rapido-icono">📞</span>
+              <span class="rapido-titulo">Emergencias</span>
+              <span class="rapido-num">911</span>
+            </button>
+
+            <button class="rapido-card" data-destino="pantalla-mental">
+              <span class="rapido-icono">💬</span>
+              <span class="rapido-titulo">Crisis emocional</span>
+              <span class="rapido-num">135</span>
+            </button>
+
+            <button class="rapido-card" data-destino="pantalla-urgencias">
+              <span class="rapido-icono">🚒</span>
+              <span class="rapido-titulo">Bomberos</span>
+              <span class="rapido-num">100</span>
+            </button>
+
+            <button class="rapido-card" data-destino="pantalla-urgencias">
+              <span class="rapido-icono">🏥</span>
+              <span class="rapido-titulo">SAME</span>
+              <span class="rapido-num">107</span>
+            </button>
+
+          </div>
+
+        </div>
+      </main>
+
+      <footer class="home-footer">
+        <div class="main-inner">
+          <p>Los recursos son orientativos. En emergencias llamá al <strong>911</strong>.</p>
+        </div>
+      </footer>
+
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════ MÓDULOS (placeholders) ══════════════════════ -->
+
+  <section class="pantalla" id="pantalla-urgencias">
+    <div class="modulo-layout">
+      <button class="btn-volver" data-destino="pantalla-home">← Volver</button>
+      <div class="modulo-header mod-urgencia">
+        <span class="modulo-icono">🚨</span>
+        <h2>Urgencias</h2>
+        <p>Guardias 24hs, emergencias y situaciones de violencia</p>
+      </div>
+      <p class="placeholder-txt">Módulo en construcción...</p>
+    </div>
+  </section>
+
+  <section class="pantalla" id="pantalla-fisica">
+    <div class="modulo-layout">
+      <button class="btn-volver" data-destino="pantalla-home">← Volver</button>
+      <div class="modulo-header mod-fisica">
+        <span class="modulo-icono">🩺</span>
+        <h2>Salud física</h2>
+        <p>Información sobre síntomas y dónde atenderte</p>
+      </div>
+      <p class="placeholder-txt">Módulo en construcción...</p>
+    </div>
+  </section>
+
+  <section class="pantalla" id="pantalla-mental">
+    <div class="modulo-layout">
+      <button class="btn-volver" data-destino="pantalla-home">← Volver</button>
+      <div class="modulo-header mod-mental">
+        <span class="modulo-icono">🧠</span>
+        <h2>Salud mental</h2>
+        <p>Recursos para ansiedad, estrés y crisis emocionales</p>
+      </div>
+      <p class="placeholder-txt">Módulo en construcción...</p>
+    </div>
+  </section>
+
+  <section class="pantalla" id="pantalla-mascotas">
+    <div class="modulo-layout">
+      <button class="btn-volver" data-destino="pantalla-home">← Volver</button>
+      <div class="modulo-header mod-mascotas">
+        <span class="modulo-icono">🐾</span>
+        <h2>Mascotas</h2>
+        <p>Veterinarias de guardia y primeros auxilios animales</p>
+      </div>
+      <p class="placeholder-txt">Módulo en construcción...</p>
+    </div>
+  </section>
+
+  <section class="pantalla" id="pantalla-centros">
+    <div class="modulo-layout">
+      <button class="btn-volver" data-destino="pantalla-home">← Volver</button>
+      <div class="modulo-header mod-centros">
+        <span class="modulo-icono">📍</span>
+        <h2>Centros cercanos</h2>
+        <p>Hospitales, CAPS y farmacias cerca tuyo</p>
+      </div>
+      <p class="placeholder-txt">Módulo en construcción...</p>
+    </div>
+  </section>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
