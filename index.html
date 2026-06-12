@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Cerca — Recursos de salud</title>
+  <title>Auxiliar — Recursos de salud</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet" />
@@ -19,8 +19,8 @@
         <div class="header-inner">
           <div class="header-top">
             <div class="logo">
-              <span class="logo-icono">＋</span>
-              <span class="logo-texto">cerca</span>
+              <span class="logo-icono">❤️‍🩹​​</span>
+              <span class="logo-texto">Auxiliar</span>
             </div>
             <button class="toggle-tema" id="toggleTema" aria-label="Cambiar modo">
               <span class="icono-tema">☀️</span>
@@ -28,8 +28,9 @@
           </div>
 
           <div class="header-search-wrap">
-            <h1 class="header-titulo">¿Qué necesitás<br><em>ahora?</em></h1>
-            <p class="header-sub">Encontrá recursos, guardias y ayuda rápido.</p>
+            <h1 class="header-titulo">AUXILIAR</h1>
+            <h2 class="header-subtitulo">¿Cómo podemos<em> ayudarte?</em></h2>
+            <p class="header-desc">Un espacio pensado para ayudarte a encontrar orientación, atención, y recursos de salud de manera sencilla</p>
           </div>
         </div>
       </header>
@@ -38,95 +39,48 @@
       <main class="home-main">
         <div class="main-inner">
 
-          <!-- Urgencias — full width, destacada -->
-          <button class="cat-card cat-urgencia" data-destino="pantalla-urgencias">
-            <div class="cat-left">
-              <div class="cat-icono-wrap">
-                <span class="cat-icono">🚨</span>
-              </div>
-              <div class="cat-info">
-                <span class="cat-titulo">Urgencias</span>
-                <span class="cat-desc">Guardias 24hs · Emergencias · Violencia</span>
-              </div>
-            </div>
-            <span class="cat-flecha">›</span>
-          </button>
 
           <!-- Grid 2 columnas -->
-          <div class="cat-grid">
+          <div class="cat-grid cat-separated-content">
 
-            <button class="cat-card cat-fisica" data-destino="pantalla-fisica">
-              <div class="cat-icono-wrap">
-                <span class="cat-icono">🩺</span>
-              </div>
-              <div class="cat-info">
-                <span class="cat-titulo">Salud física</span>
-                <span class="cat-desc">Dolor · Fiebre · Síntomas</span>
-              </div>
-              <span class="cat-flecha">›</span>
+            <button class="cat-card cat-fisica" onclick="window.location.href='screen-fisica.html'">
+              <h3>Salud<br>Física</h3>
+              <ul>
+                <li>
+                  Hospitales y Guardias
+                </li>
+                <li>
+                  Información de Salud
+                </li>
+              </ul>
             </button>
 
-            <button class="cat-card cat-mental" data-destino="pantalla-mental">
-              <div class="cat-icono-wrap">
-                <span class="cat-icono">🧠</span>
-              </div>
-              <div class="cat-info">
-                <span class="cat-titulo">Salud mental</span>
-                <span class="cat-desc">Ansiedad · Estrés · Crisis</span>
-              </div>
-              <span class="cat-flecha">›</span>
+            <button class="cat-card cat-mental" onclick="window.location.href='screen-mental.html'">
+              <img src="images/2_20260607_180258_0001.png"/>
             </button>
 
             <button class="cat-card cat-mascotas" data-destino="pantalla-mascotas">
-              <div class="cat-icono-wrap">
-                <span class="cat-icono">🐾</span>
-              </div>
-              <div class="cat-info">
-                <span class="cat-titulo">Mascotas</span>
-                <span class="cat-desc">Vet. guardia · Primeros auxilios</span>
-              </div>
-              <span class="cat-flecha">›</span>
+             <img src="images/4_20260607_180259_0003 (1).png"/>
             </button>
 
-            <button class="cat-card cat-centros" data-destino="pantalla-centros">
-              <div class="cat-icono-wrap">
-                <span class="cat-icono">📍</span>
-              </div>
-              <div class="cat-info">
-                <span class="cat-titulo">Centros cercanos</span>
-                <span class="cat-desc">Hospitales · CAPS · Farmacias</span>
-              </div>
-              <span class="cat-flecha">›</span>
+            <button class="cat-card cat-esi" data-destino="pantalla-esi">
+              <img src="images/3_20260607_180259_0002.png"/>
             </button>
 
           </div>
 
           <!-- Acceso rápido -->
-          <p class="seccion-label">Acceso rápido</p>
-          <div class="rapido-grid">
+           <div class="cat-separated-content">
+          <p class="seccion-label">Recursos rapidos</p>
+          </div>
+          <div class="cat-grid">
 
-            <button class="rapido-card" data-destino="pantalla-urgencias">
-              <span class="rapido-icono">📞</span>
-              <span class="rapido-titulo">Emergencias</span>
-              <span class="rapido-num">911</span>
+            <button class="cat-card" data-destino="pantalla-urgencias">
+             <img src="images/5_20260607_180259_0004.png"/>
             </button>
 
-            <button class="rapido-card" data-destino="pantalla-mental">
-              <span class="rapido-icono">💬</span>
-              <span class="rapido-titulo">Crisis emocional</span>
-              <span class="rapido-num">135</span>
-            </button>
-
-            <button class="rapido-card" data-destino="pantalla-urgencias">
-              <span class="rapido-icono">🚒</span>
-              <span class="rapido-titulo">Bomberos</span>
-              <span class="rapido-num">100</span>
-            </button>
-
-            <button class="rapido-card" data-destino="pantalla-urgencias">
-              <span class="rapido-icono">🏥</span>
-              <span class="rapido-titulo">SAME</span>
-              <span class="rapido-num">107</span>
+            <button class="cat-card" data-destino="pantalla-mental">
+              <img src="images/6_20260607_180259_0005.png"/>
             </button>
 
           </div>
@@ -158,29 +112,7 @@
     </div>
   </section>
 
-  <section class="pantalla" id="pantalla-fisica">
-    <div class="modulo-layout">
-      <button class="btn-volver" data-destino="pantalla-home">← Volver</button>
-      <div class="modulo-header mod-fisica">
-        <span class="modulo-icono">🩺</span>
-        <h2>Salud física</h2>
-        <p>Información sobre síntomas y dónde atenderte</p>
-      </div>
-      <p class="placeholder-txt">Módulo en construcción...</p>
-    </div>
-  </section>
 
-  <section class="pantalla" id="pantalla-mental">
-    <div class="modulo-layout">
-      <button class="btn-volver" data-destino="pantalla-home">← Volver</button>
-      <div class="modulo-header mod-mental">
-        <span class="modulo-icono">🧠</span>
-        <h2>Salud mental</h2>
-        <p>Recursos para ansiedad, estrés y crisis emocionales</p>
-      </div>
-      <p class="placeholder-txt">Módulo en construcción...</p>
-    </div>
-  </section>
 
   <section class="pantalla" id="pantalla-mascotas">
     <div class="modulo-layout">
@@ -194,13 +126,13 @@
     </div>
   </section>
 
-  <section class="pantalla" id="pantalla-centros">
+  <section class="pantalla" id="pantalla-esi">
     <div class="modulo-layout">
       <button class="btn-volver" data-destino="pantalla-home">← Volver</button>
-      <div class="modulo-header mod-centros">
+      <div class="modulo-header mod-esi">
         <span class="modulo-icono">📍</span>
-        <h2>Centros cercanos</h2>
-        <p>Hospitales, CAPS y farmacias cerca tuyo</p>
+        <h2>ESI</h2>
+        <p>Información, recursos, mitos y verdades</p>
       </div>
       <p class="placeholder-txt">Módulo en construcción...</p>
     </div>
