@@ -9,7 +9,7 @@ Falta de acceso a información sanitaria y de salud mental en los sectores más 
 
 ## Solución
 
-Un sitio web responsive donde las personas puedan encontrar fácilmente la ayuda o el asesoramiento que necesitan: salud mental, ESI, atención veterinaria, emergencias, primeros auxilios, entre otros. En lugar de mostrar toda la información de golpe, AUXILIAR guía al usuario con preguntas simples hasta llevarlo al recurso correcto. También, incluirá un formulario de inscripción apto para cualquier profesional graduado, o en camino a graduarse, de los ámbitos de salud física, mental y veterinaria, que deseen ofrecer su acompañamiento, servicio y asesoramiento de manera voluntaria y gratuita.
+Un sitio web responsive donde las personas puedan encontrar fácilmente la ayuda o el asesoramiento que necesitan: salud mental, ESI, atención veterinaria, emergencias, primeros auxilios, entre otros. En lugar de mostrar toda la información de golpe, AUXILIAR guía al usuario con preguntas simples hasta llevarlo al recurso correcto. También, incluirá un formulario de inscripción apto para cualquier profesional graduado, o en camino a graduarse, en los ámbitos de salud física, mental y veterinaria, que deseen ofrecer su acompañamiento, servicio y asesoramiento de manera voluntaria y gratuita.
 
 ## Público objetivo
 
