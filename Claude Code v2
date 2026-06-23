@@ -1,0 +1,1728 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AuxiliAR</title>
+<style>
+:root {
+  --verde: #1a6b4a;
+  --verde-claro: #e6f4ed;
+  --verde-medio: #2e9b6e;
+  --azul: #1a4b8c;
+  --azul-claro: #e8f0fb;
+  --celeste: #2979d4;
+  --naranja: #d45a1a;
+  --naranja-claro: #fdf0e8;
+  --amarillo: #c97c00;
+  --amarillo-claro: #fef8e6;
+  --rojo: #c0392b;
+  --rojo-claro: #fdecea;
+  --gris-oscuro: #1c1c1e;
+  --gris: #4a4a4f;
+  --gris-medio: #8a8a8e;
+  --gris-claro: #f2f2f4;
+  --borde: #d8d8dc;
+  --blanco: #ffffff;
+  --font-title: 'Georgia', 'Times New Roman', serif;
+  --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --radius: 10px;
+  --shadow: 0 2px 12px rgba(0,0,0,0.08);
+  --text-scale: 1;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: calc(16px * var(--text-scale)); }
+
+body {
+  font-family: var(--font-body);
+  color: var(--gris-oscuro);
+  background: var(--gris-claro);
+  line-height: 1.65;
+  font-size: 1rem;
+}
+
+/* ALTO CONTRASTE */
+body.high-contrast {
+  --verde: #00cc66;
+  --verde-claro: #001a0d;
+  --verde-medio: #00ff80;
+  --azul: #4da6ff;
+  --azul-claro: #001433;
+  --celeste: #66b3ff;
+  --naranja: #ff884d;
+  --naranja-claro: #1a0800;
+  --amarillo: #ffcc00;
+  --amarillo-claro: #1a1000;
+  --rojo: #ff4444;
+  --rojo-claro: #1a0000;
+  --gris-oscuro: #ffffff;
+  --gris: #cccccc;
+  --gris-medio: #aaaaaa;
+  --gris-claro: #111111;
+  --borde: #444444;
+  --blanco: #1a1a1a;
+  background: #000000;
+  color: #ffffff;
+}
+body.high-contrast nav { background: #000; border-bottom: 2px solid #00cc66; }
+body.high-contrast .emergencias-bar { background: #330000; border-bottom: 2px solid #ff4444; }
+body.high-contrast .emg-btn { background: #1a1a1a; color: #ff4444; border: 1px solid #ff4444; }
+body.high-contrast #onboarding { background: #000; }
+body.high-contrast .quiz-btn { background: #1a1a1a; border-color: #444; }
+body.high-contrast .quiz-btn:hover { background: #262626; border-color: #00cc66; }
+body.high-contrast .quiz-btn .qicon { background: #262626; }
+body.high-contrast .flow-header { background: #000; border-bottom: 2px solid #00cc66; }
+body.high-contrast .flow-back { background: #1a1a1a; border: 1px solid #444; }
+body.high-contrast .search-section { background: #000; border-bottom: 1px solid #444; }
+body.high-contrast .search-wrap input { background: #1a1a1a; color: #fff; border-color: #444; }
+body.high-contrast .search-results { background: #111; border-color: #444; }
+body.high-contrast .sr-item { color: #fff; border-bottom-color: #333; }
+body.high-contrast .sr-item:hover { background: #262626; }
+body.high-contrast .card, body.high-contrast .acc-btn, body.high-contrast .hosp-card,
+body.high-contrast .ong-card, body.high-contrast .contacto-card, body.high-contrast .derecho-item,
+body.high-contrast .test-card, body.high-contrast .pa-category, body.high-contrast .pa-step,
+body.high-contrast .modal, body.high-contrast .region-card, body.high-contrast .perfil-banner {
+  background: #1a1a1a; color: #fff; border-color: #444;
+}
+body.high-contrast .acc-content { background: #111; color: #fff; }
+body.high-contrast table thead th { background: #003300; }
+body.high-contrast tbody tr:nth-child(even) { background: #161616; }
+body.high-contrast tbody tr { border-bottom-color: #333; }
+body.high-contrast .test-opt { background: #262626; border-color: #444; color: #fff; }
+body.high-contrast .test-opt:hover { background: #003300; border-color: #00cc66; }
+body.high-contrast .test-progress { background: #262626; }
+body.high-contrast .form-group select, body.high-contrast .form-group input { background: #262626; color: #fff; border-color: #444; }
+body.high-contrast .btn-cancel { background: #262626; color: #fff; border-color: #444; }
+body.high-contrast .a11y-btn, body.high-contrast .ts-btn { background: #1a1a1a; border: 1px solid #444; }
+body.high-contrast .aviso-info { background: #001433; color: #4da6ff; }
+body.high-contrast .aviso-warn { background: #1a1000; color: #ffcc00; }
+body.high-contrast .aviso-danger { background: #1a0000; color: #ff4444; }
+body.high-contrast .aviso-success { background: #001a0d; color: #00cc66; }
+body.high-contrast .contrib-section { background: #001433; border-color: #444; }
+body.high-contrast .modal-overlay { background: rgba(0,0,0,0.85); }
+body.high-contrast a { color: #66b3ff; }
+body.high-contrast .ong-tel, body.high-contrast .perfil-edit { color: #00cc66; }
+
+/* FOCUS VISIBLE */
+*:focus-visible {
+  outline: 3px solid var(--celeste);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* NAV */
+nav {
+  background: var(--verde);
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.nav-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 60px;
+  gap: 1rem;
+}
+.nav-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: white;
+  flex-shrink: 0;
+}
+.nav-logo .flag {
+  width: 32px; height: 22px;
+  display: flex; flex-direction: column;
+  border-radius: 3px; overflow: hidden;
+}
+.nav-logo .flag span:nth-child(1) { background: #74acdf; flex: 1; }
+.nav-logo .flag span:nth-child(2) { background: white; flex: 1; display: flex; align-items: center; justify-content: center; }
+.nav-logo .flag span:nth-child(2)::after { content: '☀'; font-size: 10px; color: #F9A01B; line-height: 1; }
+.nav-logo .flag span:nth-child(3) { background: #74acdf; flex: 1; }
+.nav-logo strong { font-size: 1.15rem; font-weight: 800; letter-spacing: -0.02em; }
+.nav-logo strong em { color: rgba(255,255,255,0.6); font-style: normal; font-weight: 400; font-size: 0.85rem; margin-left: 4px; }
+.nav-links { display: flex; gap: 0.25rem; list-style: none; }
+.nav-links a {
+  color: rgba(255,255,255,0.88);
+  text-decoration: none;
+  font-size: 0.8rem;
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: background 0.15s;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.nav-links a:hover { background: rgba(255,255,255,0.15); color: white; }
+
+/* ACCESIBILIDAD TOOLBAR */
+.a11y-bar {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 300;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+}
+.a11y-btn {
+  background: var(--gris-oscuro);
+  color: white;
+  border: none;
+  border-radius: 50px;
+  padding: 8px 14px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+  transition: transform 0.12s, background 0.15s;
+  font-family: var(--font-body);
+  white-space: nowrap;
+}
+.a11y-btn:hover { transform: translateY(-1px); }
+.a11y-btn.active { background: var(--verde); }
+.a11y-icon { font-size: 1rem; }
+.text-size-controls { display: flex; gap: 4px; }
+.ts-btn {
+  background: var(--gris-oscuro);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 34px; height: 34px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+  transition: background 0.15s;
+  font-family: var(--font-body);
+}
+.ts-btn:hover { background: var(--verde); }
+.ts-btn.active { background: var(--verde); }
+
+/* HAMBURGER */
+.hamburger {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  flex-direction: column;
+  gap: 5px;
+  padding: 4px;
+}
+.hamburger span { display: block; width: 24px; height: 2px; background: white; border-radius: 2px; }
+
+/* EMERGENCIAS BANNER */
+.emergencias-bar {
+  background: var(--rojo);
+  color: white;
+  padding: 0.7rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.88rem;
+}
+.emg-btn {
+  background: white;
+  color: var(--rojo);
+  border: none;
+  border-radius: 50px;
+  padding: 5px 14px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: transform 0.1s;
+  font-family: var(--font-body);
+}
+.emg-btn:hover { transform: scale(1.04); }
+.emg-sep { color: rgba(255,255,255,0.4); }
+
+/* ONBOARDING */
+#onboarding {
+  min-height: calc(100vh - 120px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+  background: linear-gradient(160deg, #0f5038 0%, #1a6b4a 50%, #1a4b8c 100%);
+}
+.onboarding-inner {
+  max-width: 600px;
+  width: 100%;
+  text-align: center;
+}
+.onboarding-inner h1 {
+  font-family: var(--font-title);
+  font-size: clamp(2.2rem, 6vw, 3.5rem);
+  color: white;
+  margin-bottom: 0.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.onboarding-inner h1 span { color: rgba(255,255,255,0.5); font-weight: 400; }
+.onboarding-inner .subtitle {
+  color: rgba(255,255,255,0.72);
+  font-size: 1rem;
+  margin-bottom: 2.5rem;
+}
+.quiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.quiz-btn {
+  background: rgba(255,255,255,0.1);
+  border: 1.5px solid rgba(255,255,255,0.25);
+  color: white;
+  border-radius: 14px;
+  padding: 1.3rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  font-family: var(--font-body);
+  width: 100%;
+}
+.quiz-btn:hover { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.5); transform: translateY(-1px); }
+.quiz-btn .qicon {
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.15);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+.quiz-btn .qtitle { font-size: 1.05rem; font-weight: 700; margin-bottom: 2px; }
+.quiz-btn .qdesc { font-size: 0.8rem; color: rgba(255,255,255,0.65); font-weight: 400; }
+.contrib-link {
+  color: rgba(255,255,255,0.55);
+  font-size: 0.82rem;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+  padding-bottom: 1px;
+  transition: color 0.15s;
+  cursor: pointer;
+  background: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  font-family: var(--font-body);
+}
+.contrib-link:hover { color: rgba(255,255,255,0.85); }
+
+/* FLUJO INTERIOR */
+#app { display: none; }
+.flow-header {
+  background: var(--verde);
+  color: white;
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.flow-back {
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: white;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-body);
+  display: flex; align-items: center; gap: 5px;
+}
+.flow-back:hover { background: rgba(255,255,255,0.25); }
+.flow-title { font-size: 1rem; font-weight: 700; }
+.flow-subtitle { font-size: 0.78rem; color: rgba(255,255,255,0.7); }
+
+/* BUSCADOR */
+.search-section {
+  background: white;
+  border-bottom: 1px solid var(--borde);
+  padding: 1rem 1.5rem;
+  position: sticky;
+  top: 60px;
+  z-index: 100;
+}
+.search-wrap { max-width: 600px; margin: 0 auto; position: relative; }
+.search-wrap input {
+  width: 100%;
+  padding: 10px 16px 10px 40px;
+  border: 1.5px solid var(--borde);
+  border-radius: 50px;
+  font-size: 0.9rem;
+  outline: none;
+  font-family: var(--font-body);
+  background: var(--gris-claro);
+  color: var(--gris-oscuro);
+}
+.search-wrap input:focus { border-color: var(--verde-medio); background: white; }
+.search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 1rem; color: var(--gris-medio); pointer-events: none; }
+.search-results {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0; right: 0;
+  background: white;
+  border: 1px solid var(--borde);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  z-index: 200;
+  max-height: 320px;
+  overflow-y: auto;
+  display: none;
+}
+.search-results.open { display: block; }
+.sr-item {
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 0.86rem;
+  border-bottom: 1px solid var(--gris-claro);
+  display: flex; align-items: center; gap: 8px;
+  color: var(--gris-oscuro);
+}
+.sr-item:hover { background: var(--gris-claro); }
+.sr-item:last-child { border-bottom: none; }
+.sr-tag { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; padding: 2px 7px; border-radius: 50px; background: var(--verde-claro); color: var(--verde); flex-shrink: 0; }
+
+/* CONTENIDO PRINCIPAL */
+.main-content { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+.section-block { margin-bottom: 2.5rem; }
+.section-title {
+  font-family: var(--font-title);
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.3rem;
+}
+.section-sub { color: var(--gris-medio); font-size: 0.88rem; margin-bottom: 1.2rem; }
+.divider { width: 40px; height: 4px; background: var(--verde-medio); border-radius: 4px; margin-bottom: 0.6rem; }
+
+/* CARDS */
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+.grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; }
+.grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1rem; }
+
+.card {
+  background: var(--blanco);
+  border-radius: var(--radius);
+  padding: 1.3rem;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--borde);
+}
+.card-icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-bottom: 0.75rem; }
+.card h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.35rem; }
+.card p { font-size: 0.84rem; color: var(--gris); line-height: 1.55; }
+.card a { display: inline-flex; align-items: center; gap: 4px; margin-top: 0.7rem; font-size: 0.8rem; font-weight: 600; color: var(--celeste); text-decoration: none; }
+.card a:hover { text-decoration: underline; }
+.ic-verde { background: var(--verde-claro); }
+.ic-azul { background: var(--azul-claro); }
+.ic-naranja { background: var(--naranja-claro); }
+.ic-amarillo { background: var(--amarillo-claro); }
+.ic-rojo { background: var(--rojo-claro); }
+
+/* HOSPITALES TABS */
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1.2rem; }
+.tab-btn {
+  background: var(--gris-claro);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--gris);
+  transition: all 0.15s;
+  font-family: var(--font-body);
+}
+.tab-btn.active, .tab-btn:hover { background: var(--verde); color: white; border-color: var(--verde); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+.hosp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
+.hosp-card {
+  background: var(--gris-claro);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+  border-left: 4px solid var(--verde-medio);
+}
+.hosp-card h4 { font-size: 0.9rem; font-weight: 700; margin-bottom: 2px; }
+.hosp-esp { font-size: 0.72rem; color: var(--verde); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 3px; }
+.hosp-card p { font-size: 0.8rem; color: var(--gris); }
+.hosp-card a { font-size: 0.76rem; color: var(--celeste); text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 3px; margin-top: 4px; }
+
+/* VACUNAS */
+.vacuna-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--borde); }
+table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+thead th { background: var(--verde); color: white; padding: 10px 14px; text-align: left; font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; }
+tbody tr { border-bottom: 1px solid var(--borde); }
+tbody tr:nth-child(even) { background: var(--gris-claro); }
+tbody td { padding: 8px 14px; }
+.badge { display: inline-block; padding: 2px 8px; border-radius: 50px; font-size: 0.7rem; font-weight: 700; }
+.badge-verde { background: var(--verde-claro); color: var(--verde); }
+.badge-azul { background: var(--azul-claro); color: var(--azul); }
+.badge-naranja { background: var(--naranja-claro); color: var(--naranja); }
+
+/* ACCORDION */
+.accordion { border: 1px solid var(--borde); border-radius: var(--radius); overflow: hidden; }
+.acc-item { border-bottom: 1px solid var(--borde); }
+.acc-item:last-child { border-bottom: none; }
+.acc-btn {
+  width: 100%;
+  background: white;
+  border: none;
+  padding: 1rem 1.2rem;
+  text-align: left;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--gris-oscuro);
+  transition: background 0.12s;
+  font-family: var(--font-body);
+}
+.acc-btn:hover { background: var(--gris-claro); }
+.acc-btn .arrow { transition: transform 0.2s; font-size: 0.75rem; color: var(--gris-medio); }
+.acc-btn.open .arrow { transform: rotate(180deg); }
+.acc-content { display: none; padding: 1rem 1.2rem 1.2rem; background: var(--gris-claro); font-size: 0.85rem; color: var(--gris); line-height: 1.65; }
+.acc-content.open { display: block; }
+.acc-content ul { padding-left: 1.2rem; }
+.acc-content ul li { margin-bottom: 5px; }
+
+/* PRIMEROS AUXILIOS */
+.pa-step {
+  display: flex;
+  gap: 1rem;
+  background: white;
+  border-radius: var(--radius);
+  padding: 1.1rem;
+  border: 1px solid var(--borde);
+  margin-bottom: 0.75rem;
+  align-items: flex-start;
+}
+.pa-num {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: var(--rojo);
+  color: white;
+  font-weight: 800;
+  font-size: 0.9rem;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.pa-step h4 { font-size: 0.9rem; font-weight: 700; margin-bottom: 3px; }
+.pa-step p { font-size: 0.83rem; color: var(--gris); }
+.pa-category {
+  border-radius: var(--radius);
+  padding: 1.2rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--borde);
+  background: white;
+}
+.pa-category-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 0.8rem;
+  cursor: pointer;
+}
+.pa-category-header h3 { font-size: 1rem; font-weight: 700; }
+.pa-tag { font-size: 0.72rem; font-weight: 700; padding: 3px 9px; border-radius: 50px; text-transform: uppercase; letter-spacing: 0.04em; }
+
+/* TEST */
+.test-card {
+  background: white;
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  border: 1px solid var(--borde);
+  box-shadow: var(--shadow);
+}
+.test-progress { height: 6px; background: var(--gris-claro); border-radius: 3px; margin-bottom: 1.2rem; overflow: hidden; }
+.test-progress-bar { height: 100%; background: var(--verde); border-radius: 3px; transition: width 0.3s; }
+.test-q { font-size: 1rem; font-weight: 700; margin-bottom: 1rem; line-height: 1.4; }
+.test-options { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 1.2rem; }
+.test-opt {
+  background: var(--gris-claro);
+  border: 1.5px solid var(--borde);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-size: 0.88rem;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+  font-family: var(--font-body);
+  color: var(--gris-oscuro);
+}
+.test-opt:hover { border-color: var(--celeste); background: var(--azul-claro); }
+.test-opt.correct { background: var(--verde-claro); border-color: var(--verde); color: var(--verde); }
+.test-opt.wrong { background: var(--rojo-claro); border-color: var(--rojo); color: var(--rojo); }
+.test-opt:disabled { cursor: default; }
+.test-feedback { font-size: 0.84rem; padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; line-height: 1.5; }
+.test-feedback.ok { background: var(--verde-claro); color: var(--verde); border: 1px solid rgba(46,155,110,0.3); }
+.test-feedback.nok { background: var(--rojo-claro); color: var(--rojo); border: 1px solid rgba(192,57,43,0.3); }
+.test-nav { display: flex; justify-content: flex-end; }
+.btn-next {
+  background: var(--verde);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 20px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--font-body);
+}
+.btn-next:hover { background: var(--verde-medio); }
+
+/* DERECHOS */
+.derecho-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: white;
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--borde);
+}
+.derecho-num {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: var(--verde);
+  color: white;
+  font-weight: 800;
+  font-size: 0.82rem;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.derecho-item h4 { font-size: 0.88rem; font-weight: 700; margin-bottom: 2px; }
+.derecho-item p { font-size: 0.8rem; color: var(--gris); }
+
+/* ONGs */
+.ong-card {
+  background: white;
+  border-radius: var(--radius);
+  padding: 1.1rem;
+  border: 1px solid var(--borde);
+  box-shadow: var(--shadow);
+}
+.ong-card .ong-cat { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+.ong-card h4 { font-size: 0.9rem; font-weight: 700; margin-bottom: 3px; }
+.ong-card p { font-size: 0.8rem; color: var(--gris); margin-bottom: 6px; }
+.ong-tel { display: inline-flex; align-items: center; gap: 5px; font-size: 0.82rem; font-weight: 700; color: var(--verde); text-decoration: none; }
+.ong-tel:hover { text-decoration: underline; }
+.ong-link { display: inline-flex; align-items: center; gap: 4px; font-size: 0.78rem; color: var(--celeste); text-decoration: none; margin-left: 10px; }
+
+/* CONTACTOS */
+.contacto-card {
+  background: white;
+  border-radius: var(--radius);
+  padding: 1.2rem;
+  border: 1px solid var(--borde);
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+.contacto-card .cnum { font-size: 1.7rem; font-weight: 800; font-family: var(--font-title); color: var(--verde); display: block; line-height: 1.1; margin-bottom: 4px; }
+.contacto-card h4 { font-size: 0.85rem; font-weight: 700; margin-bottom: 3px; }
+.contacto-card p { font-size: 0.76rem; color: var(--gris); }
+.contacto-card a { display: block; margin-top: 6px; font-size: 0.82rem; font-weight: 700; color: white; background: var(--verde); border-radius: 6px; padding: 5px; text-decoration: none; }
+
+/* PERFIL */
+.perfil-banner {
+  background: var(--azul-claro);
+  border: 1px solid rgba(41,121,212,0.2);
+  border-radius: var(--radius);
+  padding: 1rem 1.2rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.86rem;
+}
+.perfil-banner strong { color: var(--azul); }
+.perfil-edit { font-size: 0.78rem; color: var(--celeste); background: none; border: none; cursor: pointer; font-family: var(--font-body); text-decoration: underline; }
+
+/* MODAL PERFIL */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 400;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 480px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+}
+.modal h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1.2rem; }
+.form-group { margin-bottom: 1rem; }
+.form-group label { display: block; font-size: 0.84rem; font-weight: 600; margin-bottom: 5px; color: var(--gris); }
+.form-group select, .form-group input {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1.5px solid var(--borde);
+  border-radius: 8px;
+  font-size: 0.88rem;
+  outline: none;
+  font-family: var(--font-body);
+  color: var(--gris-oscuro);
+  background: white;
+}
+.form-group select:focus, .form-group input:focus { border-color: var(--verde-medio); }
+.modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; }
+.btn-cancel { background: var(--gris-claro); border: 1px solid var(--borde); color: var(--gris); border-radius: 8px; padding: 8px 18px; font-size: 0.86rem; font-weight: 600; cursor: pointer; font-family: var(--font-body); }
+.btn-save { background: var(--verde); color: white; border: none; border-radius: 8px; padding: 8px 18px; font-size: 0.86rem; font-weight: 700; cursor: pointer; font-family: var(--font-body); }
+
+/* CONTRIBUIR */
+.contrib-section { background: var(--azul-claro); border-radius: 14px; padding: 2rem; border: 1px solid rgba(41,121,212,0.15); }
+.contrib-section h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--azul); }
+.contrib-section p { font-size: 0.88rem; color: var(--gris); margin-bottom: 1.2rem; }
+
+/* AVISO */
+.aviso {
+  border-radius: 8px;
+  padding: 0.9rem 1.1rem;
+  font-size: 0.84rem;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+.aviso-info { background: var(--azul-claro); color: var(--azul); border: 1px solid rgba(41,121,212,0.2); }
+.aviso-warn { background: var(--amarillo-claro); color: var(--amarillo); border: 1px solid rgba(201,124,0,0.2); }
+.aviso-danger { background: var(--rojo-claro); color: var(--rojo); border: 1px solid rgba(192,57,43,0.2); }
+.aviso-success { background: var(--verde-claro); color: var(--verde); border: 1px solid rgba(46,155,110,0.2); }
+
+/* MAPA REGION */
+.region-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 0.75rem; }
+.region-card { background: white; border-radius: var(--radius); padding: 0.9rem; border-left: 4px solid var(--celeste); border-top: 1px solid var(--borde); border-right: 1px solid var(--borde); border-bottom: 1px solid var(--borde); }
+.region-card h4 { font-size: 0.86rem; font-weight: 700; margin-bottom: 4px; }
+.region-card p { font-size: 0.76rem; color: var(--gris); line-height: 1.5; }
+
+/* FOOTER */
+footer { background: var(--gris-oscuro); color: rgba(255,255,255,0.6); padding: 2rem 1.5rem; font-size: 0.8rem; text-align: center; margin-top: 3rem; }
+footer strong { color: white; }
+footer a { color: rgba(255,255,255,0.5); text-decoration: none; }
+footer a:hover { color: white; }
+
+/* RESPONSIVE */
+@media (max-width: 680px) {
+  .nav-links { display: none; flex-direction: column; position: absolute; top: 60px; left: 0; right: 0; background: var(--verde); padding: 1rem; gap: 4px; }
+  .nav-links.open { display: flex; }
+  .nav-links a { padding: 10px 14px; font-size: 0.9rem; }
+  .hamburger { display: flex; }
+  .a11y-bar { bottom: 1rem; right: 1rem; }
+  .emergencias-bar { font-size: 0.78rem; }
+  .onboarding-inner h1 { font-size: 2rem; }
+  .main-content { padding: 1.5rem 1rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- BARRA ACCESIBILIDAD -->
+<div class="a11y-bar" role="toolbar" aria-label="Opciones de accesibilidad">
+  <div class="text-size-controls">
+    <button class="ts-btn" id="tsSmall" onclick="setTextSize(1)" aria-label="Texto normal" title="Texto normal">A</button>
+    <button class="ts-btn active" id="tsMed" onclick="setTextSize(1.15)" aria-label="Texto grande" title="Texto grande" style="font-size:1rem;">A</button>
+    <button class="ts-btn" id="tsLarge" onclick="setTextSize(1.3)" aria-label="Texto muy grande" title="Texto muy grande" style="font-size:1.15rem;">A</button>
+  </div>
+  <button class="a11y-btn" id="contrastBtn" onclick="toggleContrast()" aria-pressed="false">
+    <span class="a11y-icon">◐</span> Alto contraste
+  </button>
+  <button class="a11y-btn" id="ttsBtn" onclick="toggleTTS()" aria-pressed="false">
+    <span class="a11y-icon">🔊</span> <span id="ttsBtnLabel">Leer sección</span>
+  </button>
+</div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <a class="nav-logo" href="#" onclick="volverOnboarding(event)" aria-label="AuxiliAR inicio">
+      <div class="flag" aria-hidden="true"><span></span><span></span><span></span></div>
+      <strong>Auxili<span style="color:rgba(255,255,255,0.5);">AR</span></strong>
+    </a>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="#" onclick="navTo(event,'atencion')">Atención gratuita</a></li>
+      <li><a href="#" onclick="navTo(event,'hospitales')">Hospitales</a></li>
+      <li><a href="#" onclick="navTo(event,'vacunas')">Vacunas</a></li>
+      <li><a href="#" onclick="navTo(event,'primeros-auxilios')">Primeros auxilios</a></li>
+      <li><a href="#" onclick="navTo(event,'ongs')">ONGs</a></li>
+      <li><a href="#" onclick="navTo(event,'contactos')">Emergencias</a></li>
+    </ul>
+    <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- EMERGENCIAS -->
+<div class="emergencias-bar" role="complementary" aria-label="Números de emergencia">
+  <strong>🚨 Emergencias:</strong>
+  <a href="tel:107" class="emg-btn">📞 107 — SAME</a>
+  <span class="emg-sep">|</span>
+  <a href="tel:911" class="emg-btn">📞 911 — Policía</a>
+  <span class="emg-sep">|</span>
+  <a href="tel:08009993425" class="emg-btn">📞 0800-999-3425 — Salud Mental</a>
+  <span class="emg-sep">|</span>
+  <a href="tel:144" class="emg-btn">📞 144 — Violencia de género</a>
+</div>
+
+<!-- ONBOARDING -->
+<div id="onboarding" role="main">
+  <div class="onboarding-inner">
+    <p style="font-size:0.78rem; letter-spacing:0.1em; text-transform:uppercase; color:rgba(255,255,255,0.5); margin-bottom:0.75rem;">Sistema de salud público · Argentina</p>
+    <h1>Auxili<span>AR</span></h1>
+    <p class="subtitle">Tu guía de acceso a la salud pública argentina, gratuita y para todos.</p>
+
+    <div class="quiz-options" role="group" aria-label="¿Qué necesitás?">
+      <button class="quiz-btn" onclick="iniciarFlujo('necesito')" aria-label="Necesito ayuda para mí">
+        <div class="qicon" aria-hidden="true">🙋</div>
+        <div>
+          <div class="qtitle">Necesito ayuda</div>
+          <div class="qdesc">Busco atención médica, programas, información o recursos para mí</div>
+        </div>
+      </button>
+      <button class="quiz-btn" onclick="iniciarFlujo('ayudar')" aria-label="Quiero ayudar a alguien">
+        <div class="qicon" aria-hidden="true">🤝</div>
+        <div>
+          <div class="qtitle">Quiero ayudar</div>
+          <div class="qdesc">Encontré a alguien que necesita asistencia o quiero saber cómo actuar</div>
+        </div>
+      </button>
+    </div>
+
+    <button class="contrib-link" onclick="iniciarFlujo('contribuir')" aria-label="Soy profesional u ONG y quiero contribuir">
+      ¿Sos profesional de la salud o representás una ONG? →
+    </button>
+  </div>
+</div>
+
+<!-- APP INTERIOR -->
+<div id="app">
+
+  <!-- PERFIL MODAL -->
+  <div class="modal-overlay" id="perfilModal" role="dialog" aria-modal="true" aria-label="Configurar perfil">
+    <div class="modal">
+      <h3>Tu perfil</h3>
+      <p style="font-size:0.84rem; color:var(--gris); margin-bottom:1.2rem;">Personalizamos el contenido según tus datos. Todo se guarda localmente en tu dispositivo.</p>
+      <div class="form-group">
+        <label for="sel-provincia">Provincia</label>
+        <select id="sel-provincia">
+          <option value="">Seleccioná tu provincia</option>
+          <option>Buenos Aires (CABA)</option>
+          <option>Buenos Aires (Provincia)</option>
+          <option>Córdoba</option>
+          <option>Santa Fe</option>
+          <option>Mendoza</option>
+          <option>Tucumán</option>
+          <option>Entre Ríos</option>
+          <option>Salta</option>
+          <option>Misiones</option>
+          <option>Chaco</option>
+          <option>Corrientes</option>
+          <option>Santiago del Estero</option>
+          <option>San Juan</option>
+          <option>Jujuy</option>
+          <option>Río Negro</option>
+          <option>Neuquén</option>
+          <option>Formosa</option>
+          <option>Chubut</option>
+          <option>San Luis</option>
+          <option>Catamarca</option>
+          <option>La Rioja</option>
+          <option>La Pampa</option>
+          <option>Santa Cruz</option>
+          <option>Tierra del Fuego</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="sel-grupo">Grupo etario</label>
+        <select id="sel-grupo">
+          <option value="">Seleccioná tu grupo</option>
+          <option>Niño/a (0–12 años)</option>
+          <option>Adolescente (13–17 años)</option>
+          <option>Adulto/a joven (18–39 años)</option>
+          <option>Adulto/a (40–64 años)</option>
+          <option>Adulto/a mayor (65+ años)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="sel-condicion">Condición relevante (opcional)</label>
+        <select id="sel-condicion">
+          <option value="">Ninguna en particular</option>
+          <option>Embarazo</option>
+          <option>Diabetes</option>
+          <option>Hipertensión</option>
+          <option>Enfermedad crónica</option>
+          <option>Salud mental</option>
+          <option>Discapacidad</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="cerrarModal()">Cancelar</button>
+        <button class="btn-save" onclick="guardarPerfil()">Guardar perfil</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FLOW HEADER -->
+  <div class="flow-header" id="flowHeader">
+    <button class="flow-back" onclick="volverOnboarding()" aria-label="Volver al inicio">← Inicio</button>
+    <div>
+      <div class="flow-title" id="flowTitle">Necesito ayuda</div>
+      <div class="flow-subtitle" id="flowSubtitle">Recursos del sistema de salud público</div>
+    </div>
+  </div>
+
+  <!-- BUSCADOR -->
+  <div class="search-section" role="search">
+    <div class="search-wrap">
+      <span class="search-icon" aria-hidden="true">🔍</span>
+      <input type="search" id="searchInput" placeholder="Buscar hospitales, vacunas, programas, ONGs..." aria-label="Buscar en AuxiliAR" autocomplete="off" />
+      <div class="search-results" id="searchResults" role="listbox" aria-label="Resultados de búsqueda"></div>
+    </div>
+  </div>
+
+  <!-- CONTENIDO -->
+  <main class="main-content" id="mainContent">
+
+    <!-- PERFIL BANNER -->
+    <div class="perfil-banner" id="perfilBanner" style="display:none;">
+      <span>👤 <strong id="perfilResumen">Tu perfil</strong></span>
+      <button class="perfil-edit" id="perfilEditBtn" onclick="abrirModal()">Editar perfil</button>
+    </div>
+
+    <!-- SECCIÓN: ATENCIÓN -->
+    <div class="section-block" id="sec-atencion" data-section="atencion">
+      <div class="divider"></div>
+      <h2 class="section-title" id="titulo-atencion">Atención gratuita</h2>
+      <p class="section-sub" id="sub-atencion">Todo lo que necesitás para acceder al sistema de salud público.</p>
+
+      <div class="grid-4" style="margin-bottom:1.2rem;">
+        <div class="card" style="border-top:3px solid var(--verde);">
+          <div class="card-icon ic-verde">🪪</div>
+          <h3>Solo necesitás tu DNI</h3>
+          <p>No se puede negar atención a nadie. Con tu DNI podés acceder a cualquier hospital público.</p>
+        </div>
+        <div class="card" style="border-top:3px solid var(--celeste);">
+          <div class="card-icon ic-azul">🆓</div>
+          <h3>Todo es gratuito</h3>
+          <p>Consultas, estudios, internaciones, cirugías, partos y medicamentos en guardia sin costo.</p>
+        </div>
+        <div class="card" style="border-top:3px solid var(--naranja);">
+          <div class="card-icon ic-naranja">📅</div>
+          <h3>Turnos programados</h3>
+          <p>Para especialidades pedís turno en el hospital o por los sistemas online de cada provincia.</p>
+        </div>
+        <div class="card" style="border-top:3px solid var(--amarillo);">
+          <div class="card-icon ic-amarillo">🚨</div>
+          <h3>Guardia 24hs</h3>
+          <p>Las guardias atienden las 24 horas los 365 días del año sin necesidad de turno previo.</p>
+        </div>
+      </div>
+
+      <div class="accordion">
+        <div class="acc-item">
+          <button class="acc-btn" onclick="toggleAcc(this)">¿Pueden negarse a atenderme por no tener obra social? <span class="arrow">▼</span></button>
+          <div class="acc-content"><p>No. La Ley 26.529 y la Constitución Nacional garantizan el derecho a la salud. Ningún hospital público puede negarte atención por carecer de obra social o prepaga. Si esto sucede, pedí hablar con el director del hospital o llamá al 0800 Salud Responde.</p></div>
+        </div>
+        <div class="acc-item">
+          <button class="acc-btn" onclick="toggleAcc(this)">¿Tengo que pagar por medicamentos? <span class="arrow">▼</span></button>
+          <div class="acc-content"><ul><li>En guardia e internación: siempre gratuitos.</li><li><strong>REMEDIAR:</strong> medicamentos gratuitos en CAPS para enfermedades crónicas.</li><li><strong>Farmacia del hospital:</strong> muchos hospitales dispensan medicamentos gratuitos o a bajo costo.</li><li><strong>Farmacias populares municipales:</strong> disponibles en varios municipios.</li></ul></div>
+        </div>
+        <div class="acc-item">
+          <button class="acc-btn" onclick="toggleAcc(this)">¿Cómo accedo a estudios como análisis, ecografías o tomografías? <span class="arrow">▼</span></button>
+          <div class="acc-content"><p>Con la orden de un médico del sistema público podés realizarte estudios de forma gratuita: laboratorio, radiografías, ecografías, tomografías y resonancias, según disponibilidad del establecimiento o derivación.</p></div>
+        </div>
+        <div class="acc-item">
+          <button class="acc-btn" onclick="toggleAcc(this)">Turnos online por provincia <span class="arrow">▼</span></button>
+          <div class="acc-content">
+            <ul>
+              <li><strong>CABA:</strong> <a href="https://turnosweb.buenosaires.gob.ar" target="_blank" rel="noopener" style="color:var(--celeste);">turnosweb.buenosaires.gob.ar</a> o llamar al 147</li>
+              <li><strong>Provincia de Bs.As.:</strong> <a href="https://turnosweb.ms.gba.gov.ar" target="_blank" rel="noopener" style="color:var(--celeste);">turnosweb.ms.gba.gov.ar</a></li>
+              <li><strong>Córdoba:</strong> <a href="https://turnos.cba.gov.ar" target="_blank" rel="noopener" style="color:var(--celeste);">turnos.cba.gov.ar</a></li>
+              <li><strong>Nacional (buscador):</strong> <a href="https://www.argentina.gob.ar/salud" target="_blank" rel="noopener" style="color:var(--celeste);">argentina.gob.ar/salud</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN: HOSPITALES -->
+    <div class="section-block" id="sec-hospitales" data-section="hospitales">
+      <div class="divider"></div>
+      <h2 class="section-title" id="titulo-hospitales">Hospitales públicos</h2>
+      <p class="section-sub" id="sub-hospitales">Red de hospitales nacionales, provinciales y municipales de referencia.</p>
+
+      <div class="tabs">
+        <button class="tab-btn active" onclick="showTab(this,'tab-caba')">CABA</button>
+        <button class="tab-btn" onclick="showTab(this,'tab-gba')">Conurbano</button>
+        <button class="tab-btn" onclick="showTab(this,'tab-interior')">Interior</button>
+        <button class="tab-btn" onclick="showTab(this,'tab-especial')">Por especialidad</button>
+      </div>
+
+      <div class="tab-panel active" id="tab-caba">
+        <div class="hosp-grid">
+          <div class="hosp-card"><div class="hosp-esp">Pediatría</div><h4>Hospital Garrahan</h4><p>Combatientes de Malvinas 3150, Parque Patricios. Principal hospital pediátrico público del país.</p><a href="https://www.garrahan.gov.ar" target="_blank" rel="noopener">garrahan.gov.ar ↗</a></div>
+          <div class="hosp-card"><div class="hosp-esp">General / Alta complejidad</div><h4>Hospital de Clínicas (UBA)</h4><p>Av. Córdoba 2351, Balvanera. Hospital universitario con todas las especialidades.</p></div>
+          <div class="hosp-card"><div class="hosp-esp">Enfermedades infecciosas</div><h4>Hospital Muñiz</h4><p>Uspallata 2272, Parque Patricios. Referente nacional en infectología.</p><a href="https://www.buenosaires.gob.ar/hospitalmuniz" target="_blank" rel="noopener">buenosaires.gob.ar ↗</a></div>
+          <div class="hosp-card"><div class="hosp-esp">Oncología</div><h4>Hospital Roffo</h4><p>Av. San Martín 5481, Villa del Parque. Centro oncológico de referencia nacional.</p><a href="https://www.buenosaires.gob.ar/hospitalroffo" target="_blank" rel="noopener">buenosaires.gob.ar ↗</a></div>
+          <div class="hosp-card"><div class="hosp-esp">Salud mental</div><h4>Hospital Borda</h4><p>Dr. Ramón Carrillo 375, Barracas. Hospital monovalente de salud mental.</p></div>
+          <div class="hosp-card"><div class="hosp-esp">Maternidad / Ginecología</div><h4>Hospital Álvarez</h4><p>Av. Gaona 3355, Floresta. Referente en ginecología, obstetricia y neonatología.</p></div>
+          <div class="hosp-card"><div class="hosp-esp">General</div><h4>Hospital Ramos Mejía</h4><p>General Urquiza 609, Balvanera. Gran hospital general con guardia de alta complejidad.</p></div>
+          <div class="hosp-card"><div class="hosp-esp">Cardiología / General</div><h4>Hospital Rivadavia</h4><p>Av. Las Heras 2670, Recoleta. Hospital general de agudos con área cardiovascular.</p></div>
+        </div>
+        <p style="margin-top:0.8rem; font-size:0.8rem; color:var(--gris);">Turnos CABA: <a href="https://turnosweb.buenosaires.gob.ar" target="_blank" rel="noopener" style="color:var(--celeste);">turnosweb.buenosaires.gob.ar</a> o llamar al <strong>147</strong></p>
+      </div>
+
+      <div class="tab-panel" id="tab-gba">
+        <div class="hosp-grid">
+          <div class="hosp-card"><div class="hosp-esp">Alta complejidad · Nacional</div><h4>Hospital Posadas</h4><p>Av. Marconi y Presidente Illia, El Palomar. El hospital nacional más grande del país.</p><a href="https://www.hospitalposadas.gov.ar" target="_blank" rel="noopener">hospitalposadas.gov.ar ↗</a></div>
+          <div class="hosp-card"><div class="hosp-esp">Alta complejidad · La Plata</div><h4>Hospital San Martín</h4><p>Calle 1 esq. 70, La Plata. Hospital provincial de alta complejidad.</p></div>
+          <div class="hosp-card"><div class="hosp-esp">Pediatría · La Plata</div><h4>Hospital Sor María Ludovica</h4><p>Calle 14 nº 1631, La Plata. Principal pediátrico de la Provincia de Buenos Aires.</p></div>
+          <div class="hosp-card"><div class="hosp-esp">General · Quilmes</div><h4>Hospital Zonal Quilmes</h4><p>Av. Allison Bell 500, Quilmes. Gran cobertura en el sur del conurbano.</p></div>
+          <div class="hosp-card"><div class="hosp-esp">General · Lanús</div><h4>Hospital Evita</h4><p>Río de Janeiro 1910, Lanús. Uno de los más grandes del sur del conurbano.</p></div>
+          <div class="hosp-card"><div class="hosp-esp">General · Vicente López</div><h4>Hospital Vicente López y Planes</h4><p>Av. Maipú 1775, Vicente López. Amplia cobertura del norte del conurbano.</p></div>
+        </div>
+        <p style="margin-top:0.8rem; font-size:0.8rem; color:var(--gris);">Turnos Provincia: <a href="https://turnosweb.ms.gba.gov.ar" target="_blank" rel="noopener" style="color:var(--celeste);">turnosweb.ms.gba.gov.ar</a></p>
+      </div>
+
+      <div class="tab-panel" id="tab-interior">
+        <div class="region-grid">
+          <div class="region-card" style="border-left-color:var(--verde);"><h4>🌿 Centro</h4><p><strong>Córdoba:</strong> Hospital Nacional de Clínicas (UNC)<br><strong>Rosario:</strong> Hospital Centenario, HECA<br><strong>Santa Fe:</strong> Hospital Cullen</p></div>
+          <div class="region-card" style="border-left-color:var(--celeste);"><h4>🏔️ Cuyo</h4><p><strong>Mendoza:</strong> Hospital Central<br><strong>San Juan:</strong> Hospital Rawson<br><strong>San Luis:</strong> Hospital Regional</p></div>
+          <div class="region-card" style="border-left-color:var(--naranja);"><h4>☀️ NOA</h4><p><strong>Tucumán:</strong> Hospital del Niño Jesús, Padilla<br><strong>Salta:</strong> Hospital San Bernardo<br><strong>Jujuy:</strong> Hospital Pablo Soria</p></div>
+          <div class="region-card" style="border-left-color:var(--amarillo);"><h4>🌿 NEA</h4><p><strong>Corrientes:</strong> Hospital Vidal<br><strong>Chaco:</strong> Hospital Perrando<br><strong>Misiones:</strong> Hospital Escuela</p></div>
+          <div class="region-card" style="border-left-color:var(--verde-medio);"><h4>🌊 Patagonia</h4><p><strong>Neuquén:</strong> Hospital Castro Rendón<br><strong>Bariloche:</strong> Hospital Zonal<br><strong>Ushuaia:</strong> Hospital Regional</p></div>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="tab-especial">
+        <div class="hosp-grid">
+          <div class="hosp-card" style="border-left-color:var(--rojo);"><div class="hosp-esp" style="color:var(--rojo);">Oncología</div><h4>Hospital Roffo (CABA)</h4><p>Centro oncológico público de referencia nacional. Av. San Martín 5481.</p></div>
+          <div class="hosp-card" style="border-left-color:var(--azul);"><div class="hosp-esp" style="color:var(--azul);">Salud Mental</div><h4>Hospital Borda / Moyano</h4><p>Borda (hombres) y Moyano (mujeres) en CABA. Referentes nacionales en salud mental.</p></div>
+          <div class="hosp-card" style="border-left-color:var(--verde);"><div class="hosp-esp" style="color:var(--verde);">Pediatría</div><h4>Hospital Garrahan (CABA)</h4><p>El hospital pediátrico público más importante del país. Alta complejidad.</p></div>
+          <div class="hosp-card" style="border-left-color:var(--naranja);"><div class="hosp-esp" style="color:var(--naranja);">Maternidad</div><h4>Hospitales con maternidad</h4><p>Álvarez, Sardá, Argerich (CABA). Parto y cesárea 100% gratuitos en toda la red pública.</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN: VACUNAS -->
+    <div class="section-block" id="sec-vacunas" data-section="vacunas">
+      <div class="divider"></div>
+      <h2 class="section-title">Calendario Nacional de Vacunación</h2>
+      <p class="section-sub">27 vacunas gratuitas y obligatorias. Llevá DNI y carnet. Sin turno previo en la mayoría de los centros.</p>
+      <div class="aviso aviso-success">💡 <span>Podés vacunarte en cualquier hospital o CAPS público del país, sin importar tu obra social. En CABA también en CeSACs y vacunatorios extrahospitalarios.</span></div>
+      <div class="vacuna-wrap">
+        <table>
+          <thead><tr><th>Vacuna</th><th>Destinatarios</th><th>Obligatoria</th><th>Dosis</th></tr></thead>
+          <tbody>
+            <tr><td><strong>BCG</strong></td><td>Recién nacidos</td><td><span class="badge badge-verde">Sí</span></td><td>1</td></tr>
+            <tr><td><strong>Hepatitis B</strong></td><td>Recién nacidos, adolescentes, adultos</td><td><span class="badge badge-verde">Sí</span></td><td>3</td></tr>
+            <tr><td><strong>Pentavalente</strong></td><td>2, 4 y 6 meses</td><td><span class="badge badge-verde">Sí</span></td><td>3+refuerzo</td></tr>
+            <tr><td><strong>Poliomielitis</strong></td><td>Desde los 2 meses</td><td><span class="badge badge-verde">Sí</span></td><td>4</td></tr>
+            <tr><td><strong>Neumococo</strong></td><td>2, 4, 12 meses; mayores de 65</td><td><span class="badge badge-verde">Sí</span></td><td>3</td></tr>
+            <tr><td><strong>Rotavirus</strong></td><td>2 y 4 meses</td><td><span class="badge badge-verde">Sí</span></td><td>2</td></tr>
+            <tr><td><strong>Hepatitis A</strong></td><td>12 meses</td><td><span class="badge badge-verde">Sí</span></td><td>1</td></tr>
+            <tr><td><strong>Triple viral (SRP)</strong></td><td>12 meses y 5–6 años</td><td><span class="badge badge-verde">Sí</span></td><td>2</td></tr>
+            <tr><td><strong>Varicela</strong></td><td>15 meses y 5–6 años</td><td><span class="badge badge-verde">Sí</span></td><td>2</td></tr>
+            <tr><td><strong>Meningococo</strong></td><td>3, 5 y 15 meses</td><td><span class="badge badge-verde">Sí</span></td><td>3</td></tr>
+            <tr><td><strong>Triple bacteriana (DPT)</strong></td><td>5–6 años, adolescentes, embarazadas</td><td><span class="badge badge-verde">Sí</span></td><td>Refuerzos</td></tr>
+            <tr><td><strong>Doble bacteriana</strong></td><td>Adultos cada 10 años</td><td><span class="badge badge-azul">Recomendada</span></td><td>Cada 10 años</td></tr>
+            <tr><td><strong>VPH (Papiloma)</strong></td><td>Niñas y niños de 11 años</td><td><span class="badge badge-verde">Sí</span></td><td>2</td></tr>
+            <tr><td><strong>Antigripal</strong></td><td>Embarazadas, +65, enf. crónicas, salud</td><td><span class="badge badge-verde">Sí (grupos)</span></td><td>Anual</td></tr>
+            <tr><td><strong>COVID-19</strong></td><td>Todas las edades (+6 meses)</td><td><span class="badge badge-azul">Recomendada</span></td><td>Variable</td></tr>
+            <tr><td><strong>Fiebre Hemorrágica Argentina</strong></td><td>+15 años en zona endémica</td><td><span class="badge badge-naranja">Zona endémica</span></td><td>1</td></tr>
+            <tr><td><strong>Fiebre Amarilla</strong></td><td>Viajeros a zonas de riesgo</td><td><span class="badge badge-naranja">Viajeros</span></td><td>1 (de por vida)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="margin-top:0.8rem; font-size:0.8rem; color:var(--gris);">Calendario completo: <a href="https://www.argentina.gob.ar/salud/vacunas/calendario" target="_blank" rel="noopener" style="color:var(--celeste);">argentina.gob.ar/salud/vacunas/calendario</a></p>
+    </div>
+
+    <!-- SECCIÓN: PROGRAMAS -->
+    <div class="section-block" id="sec-programas" data-section="programas">
+      <div class="divider"></div>
+      <h2 class="section-title" id="titulo-programas">Programas nacionales</h2>
+      <p class="section-sub" id="sub-programas">El Estado nacional ofrece programas gratuitos para distintas necesidades.</p>
+      <div class="grid-2">
+        <div class="card"><div class="card-icon ic-verde">🤰</div><h3>Programa Sumar</h3><p>Cobertura para embarazadas, niños hasta 6 años, jóvenes hasta 18 y mujeres hasta 64 sin obra social. Incluye controles, laboratorio y ecografías.</p><a href="https://www.argentina.gob.ar/salud/sumar" target="_blank" rel="noopener">Ver más ↗</a></div>
+        <div class="card"><div class="card-icon ic-naranja">💊</div><h3>REMEDIAR</h3><p>Medicamentos esenciales gratuitos en CAPS para pacientes sin obra social con enfermedades crónicas: diabetes, hipertensión, asma y más.</p><a href="https://www.argentina.gob.ar/salud/remediar" target="_blank" rel="noopener">Ver más ↗</a></div>
+        <div class="card"><div class="card-icon ic-azul">🎗️</div><h3>Control del Cáncer</h3><p>Detección temprana y tratamiento gratuito. Incluye mamografías y PAP sin costo para toda la población sin obra social.</p><a href="https://www.argentina.gob.ar/salud/cancer" target="_blank" rel="noopener">Ver más ↗</a></div>
+        <div class="card"><div class="card-icon ic-verde">🧠</div><h3>Salud Mental (Ley 26.657)</h3><p>Atención gratuita en hospitales generales y centros comunitarios. Línea de crisis 24hs: 0800-999-3425.</p><a href="https://www.argentina.gob.ar/salud/saludmental" target="_blank" rel="noopener">Ver más ↗</a></div>
+        <div class="card"><div class="card-icon ic-naranja">🩸</div><h3>PRODIM (Diabetes)</h3><p>Insulina, medicamentos e insumos de control gratuitos para diabéticos sin obra social. Se tramita en hospitales y CAPS.</p></div>
+        <div class="card"><div class="card-icon ic-amarillo">👁️</div><h3>Salud Visual</h3><p>Controles oftalmológicos y anteojos gratuitos para niños, jóvenes y adultos sin obra social en centros habilitados.</p></div>
+        <div class="card"><div class="card-icon ic-azul">🦷</div><h3>Salud Dental</h3><p>Atención odontológica básica gratuita en hospitales y CAPS. Extracciones, obturaciones y tratamientos básicos.</p></div>
+        <div class="card"><div class="card-icon ic-verde">🧪</div><h3>Enfermedades poco frecuentes</h3><p>Diagnóstico, tratamiento y medicación garantizados por el Estado a través de la Red Nacional de Enfermedades Poco Frecuentes.</p><a href="https://www.argentina.gob.ar/salud/EPF" target="_blank" rel="noopener">Ver más ↗</a></div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN: PRIMEROS AUXILIOS -->
+    <div class="section-block" id="sec-primeros-auxilios" data-section="primeros-auxilios">
+      <div class="divider"></div>
+      <h2 class="section-title" id="titulo-pa">Primeros auxilios</h2>
+      <p class="section-sub" id="sub-pa">Guías básicas de acción ante emergencias. Ante cualquier duda, llamá al 107.</p>
+
+      <div class="aviso aviso-danger">🚨 <span>Esta guía no reemplaza la atención médica. Ante cualquier emergencia llamá al <strong>107 (SAME)</strong> o al <strong>911</strong> primero.</span></div>
+
+      <!-- RCP -->
+      <div class="pa-category">
+        <div class="pa-category-header" onclick="toggleAcc(this.nextElementSibling.previousElementSibling ? this : this)">
+          <span style="font-size:1.5rem;">❤️</span>
+          <h3>RCP (Reanimación cardiopulmonar)</h3>
+          <span class="pa-tag" style="background:var(--rojo-claro);color:var(--rojo);">Alta urgencia</span>
+        </div>
+        <div class="pa-step"><div class="pa-num">1</div><div><h4>Verificá que la persona no responde</h4><p>Sacudí suavemente los hombros y preguntá en voz alta. Si no responde, pedí ayuda y llamá al 107 de inmediato.</p></div></div>
+        <div class="pa-step"><div class="pa-num">2</div><div><h4>Posicioná a la persona</h4><p>Acostala boca arriba sobre una superficie firme. Incliná levemente la cabeza hacia atrás para abrir la vía aérea.</p></div></div>
+        <div class="pa-step"><div class="pa-num">3</div><div><h4>Iniciá compresiones torácicas</h4><p>Poné las manos entrelazadas en el centro del pecho. Presioná fuerte y rápido: <strong>100–120 compresiones por minuto</strong>, al menos 5 cm de profundidad.</p></div></div>
+        <div class="pa-step"><div class="pa-num">4</div><div><h4>Si sabés, dá respiración boca a boca</h4><p>Cada 30 compresiones, 2 respiraciones. Si no sabés o no podés, continuá solo con compresiones hasta que llegue el SAME.</p></div></div>
+        <div class="pa-step"><div class="pa-num">5</div><div><h4>No pares</h4><p>Continuá hasta que llegue ayuda profesional, la persona recupere respiración normal, o no puedas físicamente continuar.</p></div></div>
+      </div>
+
+      <!-- ATRAGANTAMIENTO -->
+      <div class="pa-category">
+        <div class="pa-category-header">
+          <span style="font-size:1.5rem;">😮‍💨</span>
+          <h3>Atragantamiento (Maniobra de Heimlich)</h3>
+          <span class="pa-tag" style="background:var(--rojo-claro);color:var(--rojo);">Alta urgencia</span>
+        </div>
+        <div class="pa-step"><div class="pa-num">1</div><div><h4>Confirmá que se está atragantando</h4><p>Si la persona puede toser o hablar, alentala a seguir tosiendo. Solo actuás si no puede respirar ni toser.</p></div></div>
+        <div class="pa-step"><div class="pa-num">2</div><div><h4>Posicionarte detrás</h4><p>Parate detrás, rodeá su cintura con tus brazos. Ponele una mano en puño justo arriba del ombligo y debajo del esternón.</p></div></div>
+        <div class="pa-step"><div class="pa-num">3</div><div><h4>Compresiones abdominales</h4><p>Con la otra mano sobre el puño, presioná hacia adentro y arriba de forma rápida y firme. Repetí hasta que salga el objeto o la persona pierda el conocimiento.</p></div></div>
+        <div class="pa-step"><div class="pa-num">4</div><div><h4>Si pierde el conocimiento</h4><p>Acostala en el piso, llamá al 107 e iniciá RCP. Antes de cada respiración revisá si el objeto es visible en la boca.</p></div></div>
+        <p style="font-size:0.8rem; color:var(--gris); margin-top:0.5rem;">⚠️ En bebés menores de 1 año: 5 golpes en la espalda + 5 compresiones en el pecho. Nunca Heimlich en bebés.</p>
+      </div>
+
+      <!-- QUEMADURAS -->
+      <div class="pa-category">
+        <div class="pa-category-header">
+          <span style="font-size:1.5rem;">🔥</span>
+          <h3>Quemaduras</h3>
+          <span class="pa-tag" style="background:var(--naranja-claro);color:var(--naranja);">Urgencia moderada</span>
+        </div>
+        <div class="pa-step"><div class="pa-num">1</div><div><h4>Alejá la fuente de calor</h4><p>Sacá a la persona de la fuente. Si la ropa está en llamas: detené, tirala al piso, hacela rodar.</p></div></div>
+        <div class="pa-step"><div class="pa-num">2</div><div><h4>Enfriá con agua fría corriente</h4><p>Al menos <strong>20 minutos</strong> bajo agua fría (no helada). Es el paso más importante y reduce el daño tisular.</p></div></div>
+        <div class="pa-step"><div class="pa-num">3</div><div><h4>Cubrí con paño limpio</h4><p>Cubrí sin apretar con gasa o tela limpia. No apliques pasta dental, manteca, aceite ni ninguna crema casera.</p></div></div>
+        <div class="pa-step"><div class="pa-num">4</div><div><h4>Buscá atención médica</h4><p>Ir al hospital si la quemadura es grande (mayor a la palma de la mano), en cara, manos, genitales o articulaciones, o si es de tercer grado (piel blanca o negra, sin dolor).</p></div></div>
+      </div>
+
+      <!-- HERIDAS -->
+      <div class="pa-category">
+        <div class="pa-category-header">
+          <span style="font-size:1.5rem;">🩹</span>
+          <h3>Hemorragias y heridas</h3>
+          <span class="pa-tag" style="background:var(--naranja-claro);color:var(--naranja);">Urgencia moderada</span>
+        </div>
+        <div class="pa-step"><div class="pa-num">1</div><div><h4>Presión directa sobre la herida</h4><p>Con un paño limpio o gasa, presioná firmemente sobre la herida sin levantar. Si se empapa, agregá más material encima sin retirar el primero.</p></div></div>
+        <div class="pa-step"><div class="pa-num">2</div><div><h4>Elevá el miembro</h4><p>Si es una herida en brazo o pierna y no hay fractura, elevá el miembro por encima del nivel del corazón para reducir el flujo sanguíneo.</p></div></div>
+        <div class="pa-step"><div class="pa-num">3</div><div><h4>No quitéS el objeto incrustado</h4><p>Si hay un objeto (cuchillo, vidrio) incrustado, no lo saques. Inmovilizalo y buscá atención médica urgente.</p></div></div>
+        <div class="pa-step"><div class="pa-num">4</div><div><h4>Llamá al 107 si es grave</h4><p>Si el sangrado no cede en 10 minutos con presión, si la herida es profunda o si hay pérdida de conciencia.</p></div></div>
+      </div>
+
+      <!-- ACV -->
+      <div class="pa-category">
+        <div class="pa-category-header">
+          <span style="font-size:1.5rem;">🧠</span>
+          <h3>ACV (Accidente cerebrovascular)</h3>
+          <span class="pa-tag" style="background:var(--rojo-claro);color:var(--rojo);">Alta urgencia · Llamar al 107</span>
+        </div>
+        <div class="aviso aviso-danger" style="margin-bottom:0.8rem;">🚨 <span>Ante sospecha de ACV, llamá al <strong>107</strong> inmediatamente. El tiempo es crítico: cada minuto sin tratamiento daña neuronas.</span></div>
+        <div class="pa-step"><div class="pa-num">1</div><div><h4>Reconocé los síntomas: método FAST</h4><p><strong>F</strong>ace (Cara): ¿Un lado de la cara cae? · <strong>A</strong>rms (Brazos): ¿No puede levantar los dos? · <strong>S</strong>peech (Habla): ¿Habla raro o no puede hablar? · <strong>T</strong>ime (Tiempo): Si hay alguno de estos, llamá al 107 ya.</p></div></div>
+        <div class="pa-step"><div class="pa-num">2</div><div><h4>No le des nada por boca</h4><p>Ni agua, ni medicamentos. Si está inconsciente, ponelo de costado (posición lateral de seguridad) para evitar que se ahogue.</p></div></div>
+        <div class="pa-step"><div class="pa-num">3</div><div><h4>Registrá la hora del inicio</h4><p>El equipo médico necesita saber desde cuándo empezaron los síntomas para definir el tratamiento.</p></div></div>
+      </div>
+
+      <!-- TEST -->
+      <div style="margin-top:2rem;">
+        <div class="divider" style="background:var(--celeste);"></div>
+        <h3 style="font-size:1.1rem; font-weight:700; margin-bottom:0.4rem;">Poné a prueba tus conocimientos</h3>
+        <p style="font-size:0.85rem; color:var(--gris); margin-bottom:1rem;">Un test rápido sobre primeros auxilios básicos.</p>
+        <div class="test-card" id="testCard">
+          <div class="test-progress"><div class="test-progress-bar" id="testBar" style="width:0%"></div></div>
+          <p style="font-size:0.78rem; color:var(--gris-medio); margin-bottom:0.75rem;" id="testCounter">Pregunta 1 de 6</p>
+          <p class="test-q" id="testQ"></p>
+          <div class="test-options" id="testOpts"></div>
+          <div class="test-feedback" id="testFeedback" style="display:none;"></div>
+          <div class="test-nav"><button class="btn-next" id="testNext" onclick="nextQuestion()" style="display:none;">Siguiente →</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN: ONGs -->
+    <div class="section-block" id="sec-ongs" data-section="ongs">
+      <div class="divider"></div>
+      <h2 class="section-title" id="titulo-ongs">ONGs y organizaciones de ayuda</h2>
+      <p class="section-sub" id="sub-ongs">Organizaciones que complementan el sistema público en situaciones que el Estado no alcanza a cubrir.</p>
+
+      <div class="aviso aviso-warn">⚠️ <span>Esta información puede desactualizarse. Verificá los datos de contacto antes de comunicarte en una situación de urgencia.</span></div>
+
+      <div class="tabs">
+        <button class="tab-btn active" onclick="showTab(this,'ong-salud')">Salud</button>
+        <button class="tab-btn" onclick="showTab(this,'ong-mental')">Salud mental</button>
+        <button class="tab-btn" onclick="showTab(this,'ong-violencia')">Violencia</button>
+        <button class="tab-btn" onclick="showTab(this,'ong-calle')">Situación de calle</button>
+        <button class="tab-btn" onclick="showTab(this,'ong-animal')">Animales</button>
+      </div>
+
+      <div class="tab-panel active" id="ong-salud">
+        <div class="grid-2">
+          <div class="ong-card"><div class="ong-cat" style="color:var(--verde);">VIH / ITS</div><h4>Fundación Huésped</h4><p>Atención, prevención y acompañamiento a personas con VIH y otras enfermedades infecciosas.</p><a href="tel:08000333444" class="ong-tel">📞 0800-333-4444</a><a href="https://huesped.org.ar" target="_blank" rel="noopener" class="ong-link">Web ↗</a></div>
+          <div class="ong-card"><div class="ong-cat" style="color:var(--celeste);">Salud sexual</div><h4>FUSA (Fundación para la Salud Adolescente)</h4><p>Salud sexual y reproductiva para adolescentes. Atención gratuita y confidencial.</p><a href="https://fusa.org.ar" target="_blank" rel="noopener" class="ong-link">Web ↗</a></div>
+          <div class="ong-card"><div class="ong-cat" style="color:var(--rojo);">Enfermedades raras</div><h4>FADEPOF</h4><p>Federación Argentina de Enfermedades Poco Frecuentes. Orientación y apoyo a pacientes y familias.</p><a href="https://fadepof.org.ar" target="_blank" rel="noopener" class="ong-link">Web ↗</a></div>
+          <div class="ong-card"><div class="ong-cat" style="color:var(--naranja);">Emergencias / Desastres</div><h4>Cruz Roja Argentina</h4><p>Asistencia humanitaria, primeros auxilios y respuesta ante emergencias en todo el país.</p><a href="tel:08007227233" class="ong-tel">📞 0800-722-7233</a><a href="https://cruzroja.org.ar" target="_blank" rel="noopener" class="ong-link">Web ↗</a></div>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="ong-mental">
+        <div class="grid-2">
+          <div class="ong-card"><div class="ong-cat" style="color:var(--azul);">Crisis / Suicidio</div><h4>Centro de Asistencia al Suicida</h4><p>Atención telefónica gratuita ante crisis emocionales, pensamientos suicidas y situaciones de angustia.</p><a href="tel:135" class="ong-tel">📞 135 (gratuito, 24hs)</a></div>
+          <div class="ong-card"><div class="ong-cat" style="color:var(--verde);">Adicciones</div><h4>SEDRONAR (línea gratuita)</h4><p>Orientación, asistencia y derivación en consumo problemático de sustancias.</p><a href="tel:141" class="ong-tel">📞 141 (gratuito, 24hs)</a><a href="https://www.argentina.gob.ar/sedronar" target="_blank" rel="noopener" class="ong-link">Web ↗</a></div>
+          <div class="ong-card"><div class="ong-cat" style="color:var(--naranja);">Salud mental comunitaria</div><h4>AASM (Asociación Argentina de Salud Mental)</h4><p>Derivaciones a profesionales y recursos comunitarios de salud mental gratuitos o de bajo costo.</p><a href="https://aasm.org.ar" target="_blank" rel="noopener" class="ong-link">Web ↗</a></div>
+          <div class="ong-card"><div class="ong-cat" style="color:var(--celeste);">Duelo / Pérdida</div><h4>Grupos de apoyo municipales</h4><p>La mayoría de los hospitales públicos tienen grupos terapéuticos gratuitos coordinados por profesionales. Consultá en tu hospital más cercano.</p></div>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="ong-violencia">
+        <div class="grid-2">
+          <div class="ong-card"><div class="ong-cat" style="color:var(--rojo);">Violencia de género</div><h4>Línea 144 (Nacional)</h4><p>Atención, contención y orientación ante situaciones de violencia por razones de género. Gratuita y confidencial.</p><a href="tel:144" class="ong-tel">📞 144 (gratuito, 24hs)</a></div>
+          <div class="ong-card"><div class="ong-cat" style="color:var(--naranja);">Violencia doméstica</div><h4>Casa del Encuentro</h4><p>Acompañamiento y asistencia a mujeres víctimas de violencia. Refugio y orientación legal.</p><a href="https://lacasadelencuentro.org" target="_blank" rel="noopener" class="ong-link">Web ↗</a></div>
+          <div class="ong-card"><div class="ong-cat" style="color:var(--azul);">Infancia</div><h4>INADI / Línea 102</h4><p>Atención a niños, niñas y adolescentes en situación de vulneración de derechos.</p><a href="tel:102" class="ong-tel">📞 102 (gratuito)</a></div>
+          <div class="ong-card"><div class="ong-cat" style="color:var(--verde);">Trata de personas</div><h4>Línea 145</h4><p>Denuncia y asistencia en casos de trata de personas. Gratuita, confidencial y disponible las 24hs.</p><a href="tel:145" class="ong-tel">📞 145 (gratuito, 24hs)</a></div>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="ong-calle">
+        <div class="aviso aviso-info">ℹ️ <span>Si encontrás a alguien en situación de calle que necesita ayuda, podés contactar a estas organizaciones o llamar al <strong>108 (GCBA)</strong> para derivación a refugios.</span></div>
+        <div class="grid-2">
+          <div class="ong-card"><div class="ong-cat" style="color:var(--verde);">Situación de calle · CABA</div><h4>108 — GCBA</h4><p>Línea del Gobierno de la Ciudad para asistencia a personas en situación de calle. Derivación a refugios y centros de día.</p><a href="tel:108" class="ong-tel">📞 108 (gratuito, 24hs)</a></div>
+          <div class="ong-card"><div class="ong-cat" style="color:var(--naranja);">Alimentación y abrigo</div><h4>Cáritas Argentina</h4><p>Asistencia alimentaria, ropa, acompañamiento y derivación a recursos en todo el país.</p><a href="https://caritas.org.ar" target="_blank" rel="noopener" class="ong-link">Web ↗</a></div>
+          <div class="ong-card"><div class="ong-cat" style="color:var(--celeste);">Asistencia integral</div><h4>Ejército de Salvación</h4><p>Refugio, comida y asistencia social para personas en situación de vulnerabilidad extrema.</p><a href="https://www.ejercitodesalvacion.org.ar" target="_blank" rel="noopener" class="ong-link">Web ↗</a></div>
+          <div class="ong-card"><div class="ong-cat" style="color:var(--azul);">Niños y adolescentes</div><h4>Aldeas Infantiles SOS</h4><p>Protección y acompañamiento para niños y jóvenes en situación de vulnerabilidad.</p><a href="https://www.aldeasinfantiles.org.ar" target="_blank" rel="noopener" class="ong-link">Web ↗</a></div>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="ong-animal">
+        <div class="aviso aviso-info">🐾 <span>Si encontrás un animal herido o en peligro, podés contactar al SAME Veterinario de tu municipio o a estas organizaciones.</span></div>
+        <div class="grid-2">
+          <div class="ong-card"><div class="ong-cat" style="color:var(--verde);">Emergencia veterinaria · CABA</div><h4>SAME Veterinario</h4><p>Atención de emergencia para animales en la vía pública. Rescate y traslado gratuito en CABA.</p><a href="tel:4613-3399" class="ong-tel">📞 4613-3399 (CABA)</a></div>
+          <div class="ong-card"><div class="ong-cat" style="color:var(--celeste);">Rescate y adopción</div><h4>AFADA (Asociación de Funcionarios y Abogados por los Derechos de los Animales)</h4><p>Defensa legal de animales, rescate y denuncia de maltrato.</p><a href="https://afada.org" target="_blank" rel="noopener" class="ong-link">Web ↗</a></div>
+          <div class="ong-card"><div class="ong-cat" style="color:var(--naranja);">Control animal</div><h4>Zoonosis Municipal</h4><p>Cada municipio tiene una Dirección de Zoonosis para control de animales, vacunación antirrábica gratuita y rescate.</p><p style="margin-top:4px; font-size:0.78rem;">Buscá "Zoonosis + tu municipio" para el número local.</p></div>
+          <div class="ong-card"><div class="ong-cat" style="color:var(--azul);">Denuncia maltrato</div><h4>Línea de denuncia animal</h4><p>Podés denunciar maltrato animal ante la policía (911), el SENASA o ante la fiscalía de tu jurisdicción bajo las leyes 14.346 y 27.330.</p></div>
+        </div>
+
+        <!-- PRIMEROS AUXILIOS ANIMALES -->
+        <div style="margin-top:1.5rem;">
+          <h3 style="font-size:1rem; font-weight:700; margin-bottom:0.8rem;">🐕 Primeros auxilios para animales</h3>
+          <div class="accordion">
+            <div class="acc-item">
+              <button class="acc-btn" onclick="toggleAcc(this)">Animal atropellado o con trauma <span class="arrow">▼</span></button>
+              <div class="acc-content"><ul><li>No lo muevas bruscamente, puede tener lesiones internas o de columna.</li><li>Cubrilo con una manta o ropa para mantener el calor corporal.</li><li>Si está sangrando, presioná con una tela limpia sin apretar demasiado.</li><li>Llamá al SAME Veterinario (CABA: 4613-3399) o llevalo a la veterinaria pública más cercana.</li></ul></div>
+            </div>
+            <div class="acc-item">
+              <button class="acc-btn" onclick="toggleAcc(this)">Animal inconsciente o que no respira <span class="arrow">▼</span></button>
+              <div class="acc-content"><ul><li>Verificá si respira acercando tu mano a la nariz o mirando el movimiento del pecho.</li><li>Abrí la boca con cuidado para verificar que no haya obstrucción.</li><li>RCP animal: compresiones en el costado del pecho (zona del corazón) a ritmo sostenido. Para perros y gatos: 100–120 por minuto.</li><li>Buscá atención veterinaria de urgencia inmediatamente.</li></ul></div>
+            </div>
+            <div class="acc-item">
+              <button class="acc-btn" onclick="toggleAcc(this)">Animal agresivo o asustado <span class="arrow">▼</span></button>
+              <div class="acc-content"><ul><li>No lo acorrales ni hagas movimientos bruscos. Un animal asustado puede morder aunque esté herido.</li><li>Hablá en voz baja y calmada. Ofrecé la mano para que te huela antes de tocarlo.</li><li>Usá una tela o abrigo para envolverlo si necesitás moverlo.</li><li>Si no podés manipularlo con seguridad, llamá a un organismo de rescate.</li></ul></div>
+            </div>
+            <div class="acc-item">
+              <button class="acc-btn" onclick="toggleAcc(this)">Vacunas obligatorias para mascotas <span class="arrow">▼</span></button>
+              <div class="acc-content"><ul><li><strong>Antirrábica:</strong> obligatoria por ley en todo el país para perros y gatos. Gratuita en campañas municipales de Zoonosis.</li><li><strong>Séxtuple (perros):</strong> cubre moquillo, parvovirus, adenovirus, parainfluenza, leptospirosis y coronavirus canino.</li><li><strong>Triple felina (gatos):</strong> cubre rinotraqueítis, calicivirus y panleucopenia.</li><li>Muchos municipios ofrecen jornadas de vacunación gratuita. Consultá en tu Zoonosis local.</li></ul></div>
+            </div>
+            <div class="acc-item">
+              <button class="acc-btn" onclick="toggleAcc(this)">Denuncia de maltrato animal: qué podés hacer <span class="arrow">▼</span></button>
+              <div class="acc-content"><ul><li><strong>Ley 14.346:</strong> tipifica el maltrato animal como delito penal. Podés hacer la denuncia en cualquier fiscalía o comisaría.</li><li><strong>Ley 27.330:</strong> extiende las obligaciones de bienestar animal.</li><li>Documentá con fotos o videos si podés hacerlo de forma segura.</li><li>Organizaciones como AFADA pueden asesorarte legalmente de forma gratuita.</li><li>También podés denunciar al SENASA (0800-999-2386) en casos que involucren animales de producción.</li></ul></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN: DERECHOS -->
+    <div class="section-block" id="sec-derechos" data-section="derechos">
+      <div class="divider"></div>
+      <h2 class="section-title" id="titulo-derechos">Tus derechos</h2>
+      <p class="section-sub" id="sub-derechos">La Ley 26.529 establece los derechos de los pacientes en el sistema de salud.</p>
+      <div class="grid-2">
+        <div class="derecho-item"><div class="derecho-num">1</div><div><h4>Atención gratuita</h4><p>Todo hospital público debe atenderte sin importar si tenés obra social ni dónde vivís.</p></div></div>
+        <div class="derecho-item"><div class="derecho-num">2</div><div><h4>Consentimiento informado</h4><p>Debés recibir información clara sobre diagnóstico, tratamiento y riesgos antes de aceptar cualquier procedimiento.</p></div></div>
+        <div class="derecho-item"><div class="derecho-num">3</div><div><h4>Historia clínica accesible</h4><p>Tenés derecho a obtener copia gratuita de tu historia clínica cuando la solicites.</p></div></div>
+        <div class="derecho-item"><div class="derecho-num">4</div><div><h4>Segunda opinión médica</h4><p>Podés consultar con otro profesional o institución si no estás conforme con el diagnóstico.</p></div></div>
+        <div class="derecho-item"><div class="derecho-num">5</div><div><h4>Confidencialidad</h4><p>Tu información médica es confidencial y solo puede compartirse con tu autorización explícita.</p></div></div>
+        <div class="derecho-item"><div class="derecho-num">6</div><div><h4>Trato digno</h4><p>Tenés derecho a ser tratado con respeto, sin discriminación de ningún tipo.</p></div></div>
+        <div class="derecho-item"><div class="derecho-num">7</div><div><h4>Atención urgente inmediata</h4><p>Las guardias tienen obligación de atenderte ante una urgencia, sin trámite ni pago previo.</p></div></div>
+        <div class="derecho-item"><div class="derecho-num">8</div><div><h4>Presentar reclamos</h4><p>Podés reclamar al área de Atención al Paciente del hospital, al Ministerio de Salud o a la Defensoría del Pueblo.</p></div></div>
+      </div>
+      <div class="aviso aviso-warn" style="margin-top:1rem;">⚠️ <span>Si te niegan atención: pedí hablar con el director. En CABA llamá al <strong>0800-333-3643</strong>. En Provincia al <strong>0800 Salud Responde</strong>.</span></div>
+    </div>
+
+    <!-- SECCIÓN: CONTACTOS -->
+    <div class="section-block" id="sec-contactos" data-section="contactos">
+      <div class="divider"></div>
+      <h2 class="section-title" id="titulo-contactos">Emergencias y contactos</h2>
+      <p class="section-sub">Todos los números son gratuitos y disponibles las 24 horas.</p>
+      <div class="grid-4">
+        <div class="contacto-card"><span class="cnum">107</span><h4>SAME Buenos Aires</h4><p>Emergencias médicas a domicilio</p><a href="tel:107">📞 Llamar</a></div>
+        <div class="contacto-card"><span class="cnum">911</span><h4>Emergencias generales</h4><p>Policía, bomberos, accidentes</p><a href="tel:911">📞 Llamar</a></div>
+        <div class="contacto-card"><span class="cnum">135</span><h4>Crisis / Suicidio</h4><p>Centro de asistencia al suicida</p><a href="tel:135">📞 Llamar</a></div>
+        <div class="contacto-card"><span class="cnum">144</span><h4>Violencia de género</h4><p>Gratuita, confidencial, 24hs</p><a href="tel:144">📞 Llamar</a></div>
+        <div class="contacto-card"><span class="cnum">141</span><h4>SEDRONAR</h4><p>Adicciones y consumo problemático</p><a href="tel:141">📞 Llamar</a></div>
+        <div class="contacto-card"><span class="cnum">102</span><h4>Niñez y adolescencia</h4><p>Vulneración de derechos de niños</p><a href="tel:102">📞 Llamar</a></div>
+        <div class="contacto-card"><span class="cnum">145</span><h4>Trata de personas</h4><p>Denuncia confidencial 24hs</p><a href="tel:145">📞 Llamar</a></div>
+        <div class="contacto-card"><span class="cnum">108</span><h4>Calle (CABA)</h4><p>Asistencia a personas en situación de calle</p><a href="tel:108">📞 Llamar</a></div>
+      </div>
+    </div>
+
+    <!-- SECCIÓN: CONTRIBUIR -->
+    <div class="section-block" id="sec-contribuir" data-section="contribuir" style="display:none;">
+      <div class="divider" style="background:var(--celeste);"></div>
+      <h2 class="section-title">Contribuir a AuxiliAR</h2>
+      <p class="section-sub">¿Sos profesional de la salud, representás una ONG o querés sumar recursos al directorio?</p>
+      <div class="contrib-section">
+        <h3>Sumar tu organización o servicio</h3>
+        <p>Si representás una ONG, un servicio público de salud o una iniciativa comunitaria y querés aparecer en el directorio de AuxiliAR, completá el formulario. Revisamos cada solicitud manualmente antes de incorporarla.</p>
+        <a href="mailto:auxiliar.salud.ar@gmail.com?subject=Quiero%20contribuir%20a%20AuxiliAR&body=Nombre%20de%20la%20organización%3A%0ATipo%3A%20(ONG%20%2F%20Profesional%20%2F%20Institución)%0AServicio%20que%20ofrecen%3A%0ATeléfono%20de%20contacto%3A%0ASitio%20web%3A%0AProvincia%3A%0AMensaje%20adicional%3A" style="display:inline-flex;align-items:center;gap:8px;background:var(--azul);color:white;padding:10px 20px;border-radius:var(--radius);text-decoration:none;font-weight:700;font-size:0.9rem;">✉️ Enviar solicitud por mail</a>
+      </div>
+    </div>
+
+  </main>
+
+  <footer>
+    <div style="max-width:800px; margin:0 auto;">
+      <p style="font-size:1rem; margin-bottom:0.4rem;"><strong>AuxiliAR</strong></p>
+      <p style="margin-bottom:0.6rem;">Guía del sistema de salud público y gratuito de la República Argentina.</p>
+      <p style="font-size:0.75rem; color:rgba(255,255,255,0.35);">
+        Fuentes: <a href="https://www.argentina.gob.ar/salud" target="_blank" rel="noopener">Ministerio de Salud de la Nación</a> ·
+        <a href="https://www.buenosaires.gob.ar/salud" target="_blank" rel="noopener">Min. Salud CABA</a> ·
+        Ley 26.529 · Ley 14.346 · Ley 27.330
+      </p>
+      <p style="margin-top:0.6rem; font-size:0.73rem; color:rgba(255,255,255,0.25);">Sitio informativo. Ante una emergencia llamá al 107 o 911.</p>
+    </div>
+  </footer>
+</div>
+
+<script>
+// ===== ESTADO =====
+var perfil = JSON.parse(localStorage.getItem('auxiliar_perfil') || '{}');
+var a11yPrefs = JSON.parse(localStorage.getItem('auxiliar_a11y') || '{"contrast":false,"textScale":1}');
+var flujoActual = null;
+var ttsActivo = false;
+var ttsUtterance = null;
+
+// ===== APLICAR PREFS A11Y =====
+function aplicarA11y() {
+  document.documentElement.style.setProperty('--text-scale', a11yPrefs.textScale);
+  if (a11yPrefs.contrast) {
+    document.body.classList.add('high-contrast');
+    document.getElementById('contrastBtn').classList.add('active');
+  }
+  var scale = a11yPrefs.textScale;
+  ['tsSmall','tsMed','tsLarge'].forEach(function(id) { document.getElementById(id).classList.remove('active'); });
+  if (scale <= 1) document.getElementById('tsSmall').classList.add('active');
+  else if (scale <= 1.15) document.getElementById('tsMed').classList.add('active');
+  else document.getElementById('tsLarge').classList.add('active');
+}
+aplicarA11y();
+
+function toggleContrast() {
+  a11yPrefs.contrast = !a11yPrefs.contrast;
+  document.body.classList.toggle('high-contrast', a11yPrefs.contrast);
+  document.getElementById('contrastBtn').classList.toggle('active', a11yPrefs.contrast);
+  localStorage.setItem('auxiliar_a11y', JSON.stringify(a11yPrefs));
+}
+
+function setTextSize(scale) {
+  a11yPrefs.textScale = scale;
+  document.documentElement.style.setProperty('--text-scale', scale);
+  ['tsSmall','tsMed','tsLarge'].forEach(function(id) { document.getElementById(id).classList.remove('active'); });
+  if (scale <= 1) document.getElementById('tsSmall').classList.add('active');
+  else if (scale <= 1.15) document.getElementById('tsMed').classList.add('active');
+  else document.getElementById('tsLarge').classList.add('active');
+  localStorage.setItem('auxiliar_a11y', JSON.stringify(a11yPrefs));
+}
+
+// ===== TTS =====
+function toggleTTS() {
+  if (ttsActivo) {
+    window.speechSynthesis.cancel();
+    ttsActivo = false;
+    document.getElementById('ttsBtn').classList.remove('active');
+    document.getElementById('ttsBtnLabel').textContent = 'Leer sección';
+    return;
+  }
+  var secciones = document.querySelectorAll('[data-section]');
+  var visible = null;
+  var maxVis = 0;
+  secciones.forEach(function(sec) {
+    var r = sec.getBoundingClientRect();
+    var vis = Math.min(r.bottom, window.innerHeight) - Math.max(r.top, 0);
+    if (vis > maxVis) { maxVis = vis; visible = sec; }
+  });
+  if (!visible) return;
+  var texto = visible.innerText.replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim();
+  ttsUtterance = new SpeechSynthesisUtterance(texto);
+  ttsUtterance.lang = 'es-AR';
+  ttsUtterance.rate = 0.95;
+  ttsUtterance.onend = function() {
+    ttsActivo = false;
+    document.getElementById('ttsBtn').classList.remove('active');
+    document.getElementById('ttsBtnLabel').textContent = 'Leer sección';
+  };
+  window.speechSynthesis.speak(ttsUtterance);
+  ttsActivo = true;
+  document.getElementById('ttsBtn').classList.add('active');
+  document.getElementById('ttsBtnLabel').textContent = 'Detener';
+}
+
+// ===== FLUJOS =====
+var textos = {
+  necesito: {
+    title: 'Necesito ayuda',
+    subtitle: 'Recursos del sistema de salud público para vos',
+    titulo_atencion: 'Cómo acceder a atención gratuita',
+    sub_atencion: 'Todo lo que necesitás para atenderte sin obra social.',
+    titulo_hospitales: 'Hospitales donde podés atenderte',
+    sub_hospitales: 'Encontrá el hospital más cercano según tu zona.',
+    titulo_programas: 'Programas a los que podés acceder',
+    sub_programas: 'Beneficios y recursos del Estado para tu situación.',
+    titulo_pa: 'Qué hacer en una emergencia',
+    sub_pa: 'Guías para actuar mientras llega la ayuda profesional.',
+    titulo_ongs: 'Organizaciones que pueden ayudarte',
+    sub_ongs: 'Cuando el sistema público no alcanza, estas organizaciones cubren el espacio.',
+    titulo_derechos: 'Tus derechos como paciente',
+    sub_derechos: 'Nadie puede negarte atención. Conocé tus derechos.',
+    titulo_contactos: 'Llamá ahora',
+    sub_contactos: 'Números gratuitos disponibles las 24 horas.'
+  },
+  ayudar: {
+    title: 'Quiero ayudar',
+    subtitle: 'Cómo actuar cuando alguien necesita asistencia',
+    titulo_atencion: 'Cómo derivar a alguien al sistema de salud',
+    sub_atencion: 'Cualquier persona puede pedir atención en un hospital público, aunque no tenga DNI propio.',
+    titulo_hospitales: 'Hospitales adonde podés llevar a alguien',
+    sub_hospitales: 'Todos los hospitales públicos tienen la obligación de atender sin rechazar.',
+    titulo_programas: 'Programas a los que podés derivar',
+    sub_programas: 'Ayudá a otros a conocer los recursos que el Estado ofrece.',
+    titulo_pa: 'Cómo actuar mientras llega la ayuda',
+    sub_pa: 'Primeros auxilios para aplicar vos hasta que lleguen los profesionales.',
+    titulo_ongs: 'A quién contactar según la situación',
+    sub_ongs: 'Encontraste a alguien en crisis, en situación de calle o con un animal herido: acá están los contactos.',
+    titulo_derechos: 'Derechos de la persona que estás ayudando',
+    sub_derechos: 'La persona que encontraste tiene derechos. Nadie puede negarle atención.',
+    titulo_contactos: 'Llamá ahora en su nombre',
+    sub_contactos: 'Podés llamar a estos números aunque no seas la persona afectada.'
+  },
+  contribuir: {
+    title: 'Contribuir',
+    subtitle: 'Profesionales, ONGs y organizaciones comunitarias',
+    titulo_atencion: 'El sistema de salud público',
+    sub_atencion: 'Contexto del sistema en el que operan las organizaciones.',
+    titulo_hospitales: 'Red hospitalaria pública',
+    sub_hospitales: 'Hospitales con los que podés articular derivaciones.',
+    titulo_programas: 'Programas nacionales existentes',
+    sub_programas: 'Programas estatales que podés complementar con tu trabajo.',
+    titulo_pa: 'Protocolos de primeros auxilios',
+    sub_pa: 'Guías de referencia.',
+    titulo_ongs: 'Directorio de organizaciones',
+    sub_ongs: 'Organizaciones ya presentes en el directorio.',
+    titulo_derechos: 'Marco legal',
+    sub_derechos: 'Leyes que enmarcan la atención en salud en Argentina.',
+    titulo_contactos: 'Contactos del sistema',
+    sub_contactos: 'Números clave del sistema de salud público.'
+  }
+};
+
+function iniciarFlujo(flujo) {
+  flujoActual = flujo;
+  document.getElementById('onboarding').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  var t = textos[flujo];
+  document.getElementById('flowTitle').textContent = t.title;
+  document.getElementById('flowSubtitle').textContent = t.subtitle;
+  ['atencion','hospitales','programas','pa','ongs','derechos','contactos'].forEach(function(k) {
+    var tel = document.getElementById('titulo-'+k);
+    var sel = document.getElementById('sub-'+k);
+    if (tel && t['titulo_'+k]) tel.textContent = t['titulo_'+k];
+    if (sel && t['sub_'+k]) sel.textContent = t['sub_'+k];
+  });
+  var secContrib = document.getElementById('sec-contribuir');
+  if (flujo === 'contribuir') secContrib.style.display = 'block';
+  else secContrib.style.display = 'none';
+  mostrarPerfilBanner();
+  initTest();
+  window.scrollTo(0,0);
+}
+
+function volverOnboarding(e) {
+  if (e) e.preventDefault();
+  if (ttsActivo) { window.speechSynthesis.cancel(); ttsActivo = false; document.getElementById('ttsBtn').classList.remove('active'); document.getElementById('ttsBtnLabel').textContent = 'Leer sección'; }
+  document.getElementById('onboarding').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  window.scrollTo(0,0);
+}
+
+function navTo(e, sec) {
+  e.preventDefault();
+  document.getElementById('navLinks').classList.remove('open');
+  if (document.getElementById('app').style.display === 'none' || !flujoActual) iniciarFlujo('necesito');
+  setTimeout(function() {
+    var el = document.getElementById('sec-'+sec) || document.querySelector('[data-section="'+sec+'"]');
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  }, 100);
+}
+
+// ===== PERFIL =====
+function mostrarPerfilBanner() {
+  var banner = document.getElementById('perfilBanner');
+  if (perfil.provincia || perfil.grupo) {
+    var txt = '';
+    if (perfil.provincia) txt += perfil.provincia;
+    if (perfil.grupo) txt += (txt ? ' · ' : '') + perfil.grupo;
+    if (perfil.condicion && perfil.condicion !== 'Ninguna en particular') txt += ' · ' + perfil.condicion;
+    document.getElementById('perfilResumen').textContent = txt;
+    document.getElementById('perfilEditBtn').style.display = 'inline';
+    document.getElementById('perfilEditBtn').textContent = 'Editar perfil';
+    banner.style.display = 'flex';
+  } else {
+    document.getElementById('perfilResumen').textContent = 'Personalizá tu experiencia';
+    document.getElementById('perfilEditBtn').style.display = 'inline';
+    document.getElementById('perfilEditBtn').textContent = 'Configurar perfil';
+    banner.style.display = 'flex';
+  }
+}
+
+function abrirModal() {
+  document.getElementById('sel-provincia').value = perfil.provincia || '';
+  document.getElementById('sel-grupo').value = perfil.grupo || '';
+  document.getElementById('sel-condicion').value = perfil.condicion || '';
+  document.getElementById('perfilModal').classList.add('open');
+}
+
+function cerrarModal() {
+  document.getElementById('perfilModal').classList.remove('open');
+}
+
+function guardarPerfil() {
+  perfil.provincia = document.getElementById('sel-provincia').value;
+  perfil.grupo = document.getElementById('sel-grupo').value;
+  perfil.condicion = document.getElementById('sel-condicion').value;
+  localStorage.setItem('auxiliar_perfil', JSON.stringify(perfil));
+  cerrarModal();
+  mostrarPerfilBanner();
+}
+
+// Intentar geolocalización
+if (navigator.geolocation && !perfil.provincia) {
+  navigator.geolocation.getCurrentPosition(function(pos) {
+    var lat = pos.coords.latitude, lng = pos.coords.longitude;
+    var sug = '';
+    if (lat > -34 && lat < -33.5 && lng > -59 && lng < -57.5) sug = 'Buenos Aires (CABA)';
+    else if (lat > -39 && lat < -33 && lng > -63 && lng < -56) sug = 'Buenos Aires (Provincia)';
+    else if (lat > -35 && lat < -29 && lng > -66 && lng < -60) sug = 'Córdoba';
+    else if (lat > -35 && lat < -28 && lng > -62 && lng < -59) sug = 'Santa Fe';
+    else if (lat > -38 && lat < -31 && lng > -71 && lng < -67) sug = 'Mendoza';
+    if (sug) {
+      document.getElementById('sel-provincia').value = sug;
+    }
+  }, function(){});
+}
+
+// ===== TABS =====
+function showTab(btn, id) {
+  var parent = btn.closest('.section-block') || btn.parentElement.parentElement;
+  parent.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  parent.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+  btn.classList.add('active');
+  document.getElementById(id).classList.add('active');
+}
+
+// ===== ACCORDION =====
+function toggleAcc(btn) {
+  var content = btn.nextElementSibling;
+  var isOpen = btn.classList.contains('open');
+  var container = btn.closest('.accordion') || btn.closest('.pa-category');
+  if (container) {
+    container.querySelectorAll('.acc-btn.open').forEach(function(b){ b.classList.remove('open'); if(b.nextElementSibling) b.nextElementSibling.classList.remove('open'); });
+  }
+  if (!isOpen) { btn.classList.add('open'); content.classList.add('open'); }
+}
+
+// ===== BUSCADOR =====
+var searchIndex = [
+  {t:'Emergencias médicas · SAME · 107', s:'contactos', tag:'Emergencias'},
+  {t:'RCP · reanimación cardiopulmonar', s:'primeros-auxilios', tag:'Primeros auxilios'},
+  {t:'Atragantamiento · Heimlich', s:'primeros-auxilios', tag:'Primeros auxilios'},
+  {t:'ACV · accidente cerebrovascular · FAST', s:'primeros-auxilios', tag:'Primeros auxilios'},
+  {t:'Quemaduras · cómo tratar', s:'primeros-auxilios', tag:'Primeros auxilios'},
+  {t:'Hemorragias · heridas · sangrado', s:'primeros-auxilios', tag:'Primeros auxilios'},
+  {t:'Hospital Garrahan · pediatría · niños', s:'hospitales', tag:'Hospitales'},
+  {t:'Hospital Muñiz · infecciosas', s:'hospitales', tag:'Hospitales'},
+  {t:'Hospital Posadas · alta complejidad', s:'hospitales', tag:'Hospitales'},
+  {t:'Hospital Roffo · oncología · cáncer', s:'hospitales', tag:'Hospitales'},
+  {t:'Hospital Borda · salud mental', s:'hospitales', tag:'Hospitales'},
+  {t:'Vacunas gratuitas · calendario nacional', s:'vacunas', tag:'Vacunas'},
+  {t:'Vacuna antigripal · gripe', s:'vacunas', tag:'Vacunas'},
+  {t:'VPH · papiloma · vacuna', s:'vacunas', tag:'Vacunas'},
+  {t:'COVID-19 · vacuna', s:'vacunas', tag:'Vacunas'},
+  {t:'Programa Sumar · embarazo · niños sin obra social', s:'programas', tag:'Programas'},
+  {t:'REMEDIAR · medicamentos gratuitos · crónicos', s:'programas', tag:'Programas'},
+  {t:'Diabetes · insulina · PRODIM', s:'programas', tag:'Programas'},
+  {t:'Salud mental gratuita · Ley 26.657', s:'programas', tag:'Programas'},
+  {t:'Maternidad · parto gratuito · embarazo', s:'programas', tag:'Programas'},
+  {t:'Cáncer · mamografía · PAP', s:'programas', tag:'Programas'},
+  {t:'Violencia de género · 144', s:'ongs', tag:'ONGs'},
+  {t:'SEDRONAR · adicciones · 141', s:'ongs', tag:'ONGs'},
+  {t:'Cruz Roja · emergencias', s:'ongs', tag:'ONGs'},
+  {t:'Fundación Huésped · VIH', s:'ongs', tag:'ONGs'},
+  {t:'Situación de calle · 108', s:'ongs', tag:'ONGs'},
+  {t:'Animal herido · SAME veterinario · 4613-3399', s:'ongs', tag:'Animales'},
+  {t:'Maltrato animal · denuncia · Ley 14.346', s:'ongs', tag:'Animales'},
+  {t:'Vacuna antirrábica · mascotas · gratuita', s:'ongs', tag:'Animales'},
+  {t:'Derechos del paciente · Ley 26.529', s:'derechos', tag:'Derechos'},
+  {t:'Negar atención · reclamar · hospital', s:'derechos', tag:'Derechos'},
+  {t:'Turnos online · provincias', s:'atencion', tag:'Atención'},
+  {t:'135 · suicidio · crisis emocional', s:'contactos', tag:'Emergencias'},
+  {t:'Trata de personas · 145', s:'contactos', tag:'Emergencias'},
+];
+
+var searchInput = document.getElementById('searchInput');
+var searchResults = document.getElementById('searchResults');
+
+searchInput.addEventListener('input', function() {
+  var q = this.value.toLowerCase().trim();
+  if (q.length < 2) { searchResults.classList.remove('open'); return; }
+  var res = searchIndex.filter(function(i){ return i.t.toLowerCase().includes(q); }).slice(0,8);
+  if (!res.length) { searchResults.classList.remove('open'); return; }
+  searchResults.innerHTML = res.map(function(r){
+    return '<div class="sr-item" role="option" tabindex="0" onclick="irA(\''+r.s+'\')" onkeydown="if(event.key===\'Enter\')irA(\''+r.s+'\')"><span class="sr-tag">'+r.tag+'</span> '+r.t.split('·')[0].trim()+'</div>';
+  }).join('');
+  searchResults.classList.add('open');
+});
+
+document.addEventListener('click', function(e){
+  if (!e.target.closest('.search-wrap')) searchResults.classList.remove('open');
+});
+
+function irA(sec) {
+  searchResults.classList.remove('open');
+  searchInput.value = '';
+  var el = document.getElementById('sec-'+sec);
+  if (el) el.scrollIntoView({ behavior:'smooth' });
+}
+
+// ===== HAMBURGER =====
+document.getElementById('hamburger').addEventListener('click', function(){
+  var nl = document.getElementById('navLinks');
+  var open = nl.classList.toggle('open');
+  this.setAttribute('aria-expanded', open);
+});
+
+// ===== TEST =====
+var preguntas = [
+  {q:'¿Cuál es el primer paso ante una persona inconsciente?', opts:['Empezar RCP de inmediato','Llamar al 107 y verificar si responde','Darle agua','Ponerla de lado'], ok:1, ex:'Primero verificás si responde y llamás al 107. La RCP empieza si no hay respiración normal después de esa verificación.'},
+  {q:'¿A qué ritmo deben hacerse las compresiones torácicas en RCP?', opts:['50–60 por minuto','100–120 por minuto','150 por minuto','El ritmo no importa'], ok:1, ex:'El ritmo correcto es 100–120 compresiones por minuto, con una profundidad de al menos 5 cm. Esto es según las guías de la American Heart Association.'},
+  {q:'¿La maniobra de Heimlich se aplica en bebés menores de 1 año?', opts:['Sí, igual que en adultos','Sí, pero más suave','No. Se usan 5 golpes en la espalda + 5 compresiones en el pecho','No. Se aplica RCP directamente'], ok:2, ex:'En bebés menores de 1 año nunca se usa Heimlich. La técnica correcta es 5 golpes interescapulares + 5 compresiones torácicas, alternando.'},
+  {q:'¿Qué NO hay que aplicar sobre una quemadura?', opts:['Agua fría corriente','Gasa limpia','Pasta dental o manteca','Ninguna: todas son correctas'], ok:2, ex:'La pasta dental, manteca, aceite y otros remedios caseros pueden empeorar la quemadura e infectarla. Solo agua fría corriente por 20 minutos y gasa limpia.'},
+  {q:'¿Qué significa la F en el método FAST para detectar un ACV?', opts:['Fiebre alta','Cara: verificar si un lado cae','Frecuencia cardíaca','Fatiga extrema'], ok:1, ex:'FAST: Face (cara), Arms (brazos), Speech (habla), Time (tiempo). La "F" es verificar si un lado de la cara cae al pedirle a la persona que sonría.'},
+  {q:'¿Ante un animal atropellado, qué es lo primero que hay que hacer?', opts:['Moverlo rápido a un lugar seguro','No moverlo bruscamente y llamar al SAME Veterinario','Darle agua','Dejarlo quieto sin hacer nada'], ok:1, ex:'Moverlo bruscamente puede agravar lesiones internas o de columna. Lo correcto es no moverlo sin necesidad, cubrirlo para mantener el calor y llamar al SAME Veterinario (CABA: 4613-3399) o a una veterinaria pública.'}
+];
+
+var testIdx = 0, testScore = 0, testAnswered = false;
+
+function initTest() {
+  testIdx = 0; testScore = 0; testAnswered = false;
+  renderQuestion();
+}
+
+function renderQuestion() {
+  if (testIdx >= preguntas.length) {
+    showResult(); return;
+  }
+  var p = preguntas[testIdx];
+  document.getElementById('testCounter').textContent = 'Pregunta ' + (testIdx+1) + ' de ' + preguntas.length;
+  document.getElementById('testBar').style.width = (testIdx / preguntas.length * 100) + '%';
+  document.getElementById('testQ').textContent = p.q;
+  document.getElementById('testOpts').innerHTML = p.opts.map(function(o,i){
+    return '<button class="test-opt" onclick="responder('+i+')" aria-label="Opción: '+o+'">'+o+'</button>';
+  }).join('');
+  var fb = document.getElementById('testFeedback');
+  fb.style.display = 'none'; fb.textContent = '';
+  document.getElementById('testNext').style.display = 'none';
+  testAnswered = false;
+}
+
+function responder(idx) {
+  if (testAnswered) return;
+  testAnswered = true;
+  var p = preguntas[testIdx];
+  var opts = document.querySelectorAll('.test-opt');
+  opts.forEach(function(o){ o.disabled = true; });
+  var fb = document.getElementById('testFeedback');
+  if (idx === p.ok) {
+    opts[idx].classList.add('correct');
+    fb.className = 'test-feedback ok';
+    fb.textContent = '✓ Correcto. ' + p.ex;
+    testScore++;
+  } else {
+    opts[idx].classList.add('wrong');
+    opts[p.ok].classList.add('correct');
+    fb.className = 'test-feedback nok';
+    fb.textContent = '✗ Incorrecto. ' + p.ex;
+  }
+  fb.style.display = 'block';
+  document.getElementById('testNext').style.display = 'block';
+  document.getElementById('testNext').textContent = testIdx < preguntas.length - 1 ? 'Siguiente →' : 'Ver resultados';
+}
+
+function nextQuestion() {
+  testIdx++;
+  renderQuestion();
+}
+
+function showResult() {
+  var pct = Math.round(testScore / preguntas.length * 100);
+  var msg = pct >= 80 ? '¡Muy bien! Tenés buenos conocimientos de primeros auxilios.' : pct >= 50 ? 'Bien. Repasá las secciones donde te equivocaste para estar mejor preparado.' : 'Te recomendamos releer las guías de primeros auxilios de arriba. Puede marcar la diferencia en una emergencia.';
+  document.getElementById('testCard').innerHTML =
+    '<div style="text-align:center;padding:1rem 0;">' +
+    '<div style="font-size:3rem;font-weight:800;font-family:var(--font-title);color:var(--verde);">' + testScore + '/' + preguntas.length + '</div>' +
+    '<div style="font-size:1rem;color:var(--gris);margin:0.5rem 0 1rem;">' + pct + '% correcto</div>' +
+    '<p style="font-size:0.88rem;color:var(--gris-oscuro);max-width:360px;margin:0 auto 1.5rem;">' + msg + '</p>' +
+    '<button class="btn-next" onclick="initTest()" style="margin:0 auto;display:block;">Reiniciar test</button>' +
+    '</div>';
+}
+
+initTest();
+</script>
+</body>
+</html>
