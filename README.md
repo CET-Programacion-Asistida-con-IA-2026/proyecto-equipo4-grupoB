@@ -1,4 +1,3 @@
-[README_1.md](https://github.com/user-attachments/files/29005001/README_1.md)
 # AUXILIAR
 
 Plataforma web que acompaña a las personas, paso a paso, para que encuentren rápidamente recursos de salud, asistencia y orientación en Argentina — o para que puedan sumarse como voluntarios/as y ayudar a otros.
