@@ -755,7 +755,10 @@ tbody td { padding: 7px 13px; }
 .app-footer strong { color: white; }
 .app-footer a { color: rgba(255,255,255,0.5); text-decoration: none; }
 .app-footer a:hover { color: white; }
-
+[data-theme="dark"] .app-footer { background: #1a2535; color: rgba(255,255,255,0.75); }
+[data-theme="dark"] .app-footer strong { color: #e8edf5; }
+[data-theme="dark"] .app-footer a { color: #4ed9a0; }
+[data-theme="dark"] .app-footer a:hover { color: #6fffc8; }
 /* ====== DARK MODE icon-btn fix ====== */
 [data-theme="dark"] .app-header { background: #0d2e1e; box-shadow: 0 2px 12px rgba(0,0,0,0.5); }
 [data-theme="dark"] .emg-bar { background: #7a1515; }
