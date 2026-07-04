@@ -127,12 +127,12 @@ body.high-contrast .app-footer { background: #000 !important; color: #fff !impor
 :root:not([data-theme="dark"]) .flow-title { color: var(--primario); }
 :root:not([data-theme="dark"]) .flow-subtitle { color: var(--gris); }
 /* High contrast light mode */
-body.high-contrast:not([data-theme="dark"]) .aviso { background: #000 !important; color: #fff !important; border: 2px solid #fff !important; }
-body.high-contrast:not([data-theme="dark"]) .card { background: #fff !important; color: #000 !important; border: 2px solid #000 !important; }
-body.high-contrast:not([data-theme="dark"]) .section-title,
-body.high-contrast:not([data-theme="dark"]) .section-sub { color: #000 !important; }
-body.high-contrast:not([data-theme="dark"]) .cat-card__title,
-body.high-contrast:not([data-theme="dark"]) .cat-card__list { color: #000 !important; }
+html:not([data-theme="dark"]) body.high-contrast .aviso { background: #000 !important; color: #fff !important; border: 2px solid #fff !important; }
+html:not([data-theme="dark"]) body.high-contrast .card { background: #fff !important; color: #000 !important; border: 2px solid #000 !important; }
+html:not([data-theme="dark"]) body.high-contrast .section-title,
+html:not([data-theme="dark"]) body.high-contrast .section-sub { color: #000 !important; }
+html:not([data-theme="dark"]) body.high-contrast .cat-card__title,
+html:not([data-theme="dark"]) body.high-contrast .cat-card__list { color: #000 !important; }
 body.high-contrast .app-footer strong { color: #fff !important; }
 body.high-contrast .app-footer a { color: #ffd700 !important; }
 
@@ -907,88 +907,98 @@ tbody td { padding: 7px 12px; color: var(--color-text); }
 
 /* HIGH CONTRAST — sin tocar backgrounds globales
    Solo reforzar legibilidad de texto y bordes */
-body.high-contrast:not([data-theme="dark"]) {
+html:not([data-theme="dark"]) body.high-contrast {
   --color-text: #000;
   --color-text-muted: #222;
   --borde: #000;
+  --color-background: #ffffff;
+  --color-surface: #ffffff;
+  --primario-claro: #fff;
+  --gris-claro: #f5f5f5;
 }
 /* Textos de contenido */
-body.high-contrast:not([data-theme="dark"]) h1,
-body.high-contrast:not([data-theme="dark"]) h2,
-body.high-contrast:not([data-theme="dark"]) h3,
-body.high-contrast:not([data-theme="dark"]) h4,
-body.high-contrast:not([data-theme="dark"]) p,
-body.high-contrast:not([data-theme="dark"]) li { color: #000 !important; }
-body.high-contrast:not([data-theme="dark"]) .section-title,
-body.high-contrast:not([data-theme="dark"]) .section-sub { color: #000 !important; }
+html:not([data-theme="dark"]) body.high-contrast h1,
+html:not([data-theme="dark"]) body.high-contrast h2,
+html:not([data-theme="dark"]) body.high-contrast h3,
+html:not([data-theme="dark"]) body.high-contrast h4,
+html:not([data-theme="dark"]) body.high-contrast p,
+html:not([data-theme="dark"]) body.high-contrast li { color: #000 !important; }
+html:not([data-theme="dark"]) body.high-contrast .section-title,
+html:not([data-theme="dark"]) body.high-contrast .section-sub { color: #000 !important; }
 /* Cards: borde negro marcado, fondo blanco, texto negro */
-body.high-contrast:not([data-theme="dark"]) .card,
-body.high-contrast:not([data-theme="dark"]) .cat-card,
-body.high-contrast:not([data-theme="dark"]) .hosp-card,
-body.high-contrast:not([data-theme="dark"]) .contacto-card,
-body.high-contrast:not([data-theme="dark"]) .region-card,
-body.high-contrast:not([data-theme="dark"]) .salud-card {
+html:not([data-theme="dark"]) body.high-contrast .card,
+html:not([data-theme="dark"]) body.high-contrast .cat-card,
+html:not([data-theme="dark"]) body.high-contrast .hosp-card,
+html:not([data-theme="dark"]) body.high-contrast .contacto-card,
+html:not([data-theme="dark"]) body.high-contrast .region-card,
+html:not([data-theme="dark"]) body.high-contrast .salud-card {
   background: #fff !important; color: #000 !important;
   border: 2px solid #000 !important;
 }
-body.high-contrast:not([data-theme="dark"]) .cat-card__title,
-body.high-contrast:not([data-theme="dark"]) .cat-card__list { color: #000 !important; }
+html:not([data-theme="dark"]) body.high-contrast .cat-card__title,
+html:not([data-theme="dark"]) body.high-contrast .cat-card__list { color: #000 !important; }
 /* Tabs y acordeones */
-body.high-contrast:not([data-theme="dark"]) .tab-btn { color: #000 !important; background: #f5f5f5 !important; border: 1px solid #666 !important; }
-body.high-contrast:not([data-theme="dark"]) .tab-btn.active { color: #7c2d2d !important; border-color: #7c2d2d !important; background: #fff !important; }
-body.high-contrast:not([data-theme="dark"]) .acc-btn { color: #000 !important; }
-body.high-contrast:not([data-theme="dark"]) .acc-content { color: #222 !important; }
+html:not([data-theme="dark"]) body.high-contrast .tab-btn { color: #000 !important; background: #f5f5f5 !important; border: 1px solid #666 !important; }
+html:not([data-theme="dark"]) body.high-contrast .tab-btn.active { color: #7c2d2d !important; border-color: #7c2d2d !important; background: #fff !important; }
+html:not([data-theme="dark"]) body.high-contrast .acc-btn { color: #000 !important; }
+html:not([data-theme="dark"]) body.high-contrast .acc-content { color: #222 !important; }
 /* Links de mapas */
-body.high-contrast:not([data-theme="dark"]) .mapa-link-title { color: #00008b !important; }
-body.high-contrast:not([data-theme="dark"]) .cal-link-title { color: #006400 !important; }
+html:not([data-theme="dark"]) body.high-contrast .mapa-link-title { color: #00008b !important; }
+html:not([data-theme="dark"]) body.high-contrast .cal-link-title { color: #006400 !important; }
 /* Flow header en HC light */
-body.high-contrast:not([data-theme="dark"]) .flow-title { color: #7c2d2d !important; }
+html:not([data-theme="dark"]) body.high-contrast .flow-title { color: #fff !important; }
 /* Barra de emergencias */
-body.high-contrast:not([data-theme="dark"]) .emg-bar { background: #7c0000 !important; }
-body.high-contrast:not([data-theme="dark"]) .emg-bar strong,
-body.high-contrast:not([data-theme="dark"]) .emg-btn { color: #fff !important; }
+html:not([data-theme="dark"]) body.high-contrast .emg-bar { background: #7c0000 !important; }
+html:not([data-theme="dark"]) body.high-contrast .emg-bar strong,
+html:not([data-theme="dark"]) body.high-contrast .emg-btn { color: #fff !important; }
 /* Formularios */
-body.high-contrast:not([data-theme="dark"]) .form-field label { color: #000 !important; }
-body.high-contrast:not([data-theme="dark"]) .form-field input,
-body.high-contrast:not([data-theme="dark"]) .form-field textarea,
-body.high-contrast:not([data-theme="dark"]) .form-field select {
+html:not([data-theme="dark"]) body.high-contrast .form-field label { color: #000 !important; }
+html:not([data-theme="dark"]) body.high-contrast .form-field input,
+html:not([data-theme="dark"]) body.high-contrast .form-field textarea,
+html:not([data-theme="dark"]) body.high-contrast .form-field select {
   border: 2px solid #000 !important; color: #000 !important; background: #fff !important;
 }
 /* A11y panel en HC */
-body.high-contrast:not([data-theme="dark"]) .a11y-panel-slide {
+html:not([data-theme="dark"]) body.high-contrast .a11y-panel-slide {
   background: #fff !important; border: 2px solid #000 !important;
 }
-body.high-contrast:not([data-theme="dark"]) .a11y-opt,
-body.high-contrast:not([data-theme="dark"]) .a11y-btn,
-body.high-contrast:not([data-theme="dark"]) .a11y-reset {
+html:not([data-theme="dark"]) body.high-contrast .a11y-opt,
+html:not([data-theme="dark"]) body.high-contrast .a11y-btn,
+html:not([data-theme="dark"]) body.high-contrast .a11y-reset {
   color: #000 !important; border-color: #000 !important; background: #f5f5f5 !important;
 }
 
 /* HIGH CONTRAST — dark mode: reforzar blancos */
-body.high-contrast[data-theme="dark"] {
+html[data-theme="dark"] body.high-contrast {
   --color-text: #fff;
   --color-text-muted: #e0e0e0;
 }
-body.high-contrast[data-theme="dark"] h1,
-body.high-contrast[data-theme="dark"] h2,
-body.high-contrast[data-theme="dark"] h3,
-body.high-contrast[data-theme="dark"] h4,
-body.high-contrast[data-theme="dark"] p { color: #fff !important; }
-body.high-contrast[data-theme="dark"] .section-title,
-body.high-contrast[data-theme="dark"] .section-sub { color: #fff !important; }
-body.high-contrast[data-theme="dark"] .cat-card__title { color: #fff !important; }
-body.high-contrast[data-theme="dark"] .tab-btn { color: #ccc !important; }
-body.high-contrast[data-theme="dark"] .tab-btn.active { color: #ff9999 !important; border-color: #ff9999 !important; }
-body.high-contrast[data-theme="dark"] .card,
-body.high-contrast[data-theme="dark"] .hosp-card { background: #1a1a1a !important; border: 2px solid #ccc !important; }
-body.high-contrast[data-theme="dark"] .card h3,
-body.high-contrast[data-theme="dark"] .card p { color: #fff !important; }
-body.high-contrast[data-theme="dark"] .acc-btn { color: #fff !important; background: #1a1a1a !important; }
-body.high-contrast[data-theme="dark"] .form-field label { color: #fff !important; }
-body.high-contrast[data-theme="dark"] .form-field input,
-body.high-contrast[data-theme="dark"] .form-field textarea {
+html[data-theme="dark"] body.high-contrast h1,
+html[data-theme="dark"] body.high-contrast h2,
+html[data-theme="dark"] body.high-contrast h3,
+html[data-theme="dark"] body.high-contrast h4,
+html[data-theme="dark"] body.high-contrast p { color: #fff !important; }
+html[data-theme="dark"] body.high-contrast .section-title,
+html[data-theme="dark"] body.high-contrast .section-sub { color: #fff !important; }
+html[data-theme="dark"] body.high-contrast .cat-card__title { color: #fff !important; }
+html[data-theme="dark"] body.high-contrast .tab-btn { color: #ccc !important; }
+html[data-theme="dark"] body.high-contrast .tab-btn.active { color: #ff9999 !important; border-color: #ff9999 !important; }
+html[data-theme="dark"] body.high-contrast .card,
+html[data-theme="dark"] body.high-contrast .hosp-card { background: #1a1a1a !important; border: 2px solid #ccc !important; }
+html[data-theme="dark"] body.high-contrast .card h3,
+html[data-theme="dark"] body.high-contrast .card p { color: #fff !important; }
+html[data-theme="dark"] body.high-contrast .acc-btn { color: #fff !important; background: #1a1a1a !important; }
+html[data-theme="dark"] body.high-contrast .form-field label { color: #fff !important; }
+html[data-theme="dark"] body.high-contrast .form-field input,
+html[data-theme="dark"] body.high-contrast .form-field textarea {
   border: 2px solid #ccc !important; color: #fff !important; background: #111 !important;
 }
+/* Auxi conversation bubble/buttons — always sit on a fixed white bubble, regardless of theme */
+html[data-theme="dark"] body.high-contrast .auxi-bubble p { color: #000 !important; }
+body.high-contrast .auxi-bubble { background: #fff !important; border: 2px solid #000; }
+body.high-contrast .auxi-btn--primary { color: #7c2d2d !important; }
+body.high-contrast .auxi-field input { color: #1c1917 !important; }
+body.high-contrast .auxi-field-btn { background: #7c2d2d !important; color: #fff !important; }
 
 </style>
 </head>
@@ -1333,6 +1343,7 @@ function AUXI_SVG(expr) {
 }
 
 let auxiState = { step: 'welcome', data: {}, expr: 'happy', history: [] };
+let auxiSkipReset = false; // when true, viewInicio() won't overwrite an auxiState set right before navigate('/')
 
 function setAuxiExpr(expr) { auxiState.expr = expr; }
 
@@ -1983,7 +1994,11 @@ function addFieldStep(container, placeholder, dataKey, nextStep) {
 
 /* ============ VIEW: INICIO ============ */
 function viewInicio() {
-  auxiState = { step:'welcome', data:{}, expr:'happy', history:[] };
+  if (auxiSkipReset) {
+    auxiSkipReset = false;
+  } else {
+    auxiState = { step:'welcome', data:{}, expr:'happy', history:[] };
+  }
   // Render Auxi in next tick so #app-outlet exists in DOM
   requestAnimationFrame(function(){
     try { renderAuxi(); } catch(e){ console.error('Auxi render error:', e); }
@@ -2366,7 +2381,7 @@ function viewAnimales() {
           paStep(5,'Heridas graves','Comprimí con un trapo limpio. No apliques alcohol directamente. Dirigite a guardia veterinaria.'),
         ]),
       ]),
-      voluntariosInline('animals'),
+      voluntariosInline('atención veterinaria'),
     ]),
   ]);
 }
@@ -2816,7 +2831,7 @@ function viewCentros() {
         sectionTitle('Atención Veterinaria'),
         h('div',{class:'grid-2'},[
           (()=>{ const c=h('div',{class:'centro-card'}); c.innerHTML='<h4>Veterinarias gratuitas — CABA</h4><p>Centros fijos y móviles, castración y vacunación</p>'; const a=h('a',{href:'https://buenosaires.gob.ar/agenciaambiental/mascotas/atencion-veterinaria-y-castraciones-gratuitas',target:'_blank',rel:'noopener'},'Ver cronograma'); c.appendChild(a); return c; })(),
-          (()=>{ const c=h('div',{class:'centro-card'}); c.innerHTML='<h4>Vacunación antirrábica — CABA</h4><p>Operativos gratuitos en distintos barrios</p>'; const a=h('a',{href:'https://buenosaires.gob.ar/agenciaambiental/animals',target:'_blank',rel:'noopener'},'Ver operativos'); c.appendChild(a); return c; })(),
+          (()=>{ const c=h('div',{class:'centro-card'}); c.innerHTML='<h4>Vacunación antirrábica — CABA</h4><p>Operativos gratuitos en distintos barrios</p>'; const a=h('a',{href:'https://buenosaires.gob.ar/agenciaambiental/mascotas/atencion-veterinaria-y-castraciones-gratuitas',target:'_blank',rel:'noopener'},'Ver operativos'); c.appendChild(a); return c; })(),
         ]),
       ]),
     ]),
@@ -2927,8 +2942,8 @@ function viewMiSalud() {
       +'<p style="color:var(--color-text-muted);margin-bottom:1.5rem;">Completá tu perfil con Auxi para ver tu información de salud personalizada.</p>';
     var auxiBtn = h('button',{class:'btn btn--primary',onclick:function(){
       auxiState={step:'perfil_nombre',data:{destino:'/mi-salud'},expr:'caring',history:[]};
+      auxiSkipReset = true;
       navigate('/');
-      setTimeout(function(){renderAuxi();},100);
     }},'Crear mi perfil con Auxi');
     noPerfil.appendChild(auxiBtn);
     mc.appendChild(noPerfil);
@@ -3263,10 +3278,10 @@ const searchIndex = [
   {t:'INADI · discriminación · orientación sexual',s:'esi',tag:'ESI'},
   {t:'ESI · educación sexual integral · Ley 26.150',s:'esi',tag:'ESI'},
   // Mascotas
-  {t:'Veterinarias gratuitas · animals · CABA',s:'veterinarias',tag:'Animales'},
+  {t:'Veterinarias gratuitas · mascotas · CABA',s:'veterinarias',tag:'Animales'},
   {t:'Castración gratuita · perros · gatos',s:'veterinarias',tag:'Animales'},
-  {t:'Vacunación antirrábica · animals',s:'vacunacion-animals',tag:'Animales'},
-  {t:'Primeros auxilios animals · atragantamiento',s:'pa-animals',tag:'Animales'},
+  {t:'Vacunación antirrábica · mascotas',s:'vacunacion-animals',tag:'Animales'},
+  {t:'Primeros auxilios para mascotas · atragantamiento',s:'pa-animals',tag:'Animales'},
   {t:'Intoxicación animal · veneno animal',s:'pa-animals',tag:'Animales'},
   {t:'Móviles veterinarios · barrios CABA',s:'veterinarias',tag:'Animales'},
   // Donaciones

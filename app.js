@@ -204,6 +204,7 @@ function AUXI_SVG(expr) {
 }
 
 let auxiState = { step: 'welcome', data: {}, expr: 'happy', history: [] };
+let auxiSkipReset = false; // when true, viewInicio() won't overwrite an auxiState set right before navigate('/')
 
 function setAuxiExpr(expr) { auxiState.expr = expr; }
 
@@ -854,7 +855,11 @@ function addFieldStep(container, placeholder, dataKey, nextStep) {
 
 /* ============ VIEW: INICIO ============ */
 function viewInicio() {
-  auxiState = { step:'welcome', data:{}, expr:'happy', history:[] };
+  if (auxiSkipReset) {
+    auxiSkipReset = false;
+  } else {
+    auxiState = { step:'welcome', data:{}, expr:'happy', history:[] };
+  }
   // Render Auxi in next tick so #app-outlet exists in DOM
   requestAnimationFrame(function(){
     try { renderAuxi(); } catch(e){ console.error('Auxi render error:', e); }
@@ -1237,7 +1242,7 @@ function viewAnimales() {
           paStep(5,'Heridas graves','Comprimí con un trapo limpio. No apliques alcohol directamente. Dirigite a guardia veterinaria.'),
         ]),
       ]),
-      voluntariosInline('animals'),
+      voluntariosInline('atención veterinaria'),
     ]),
   ]);
 }
@@ -1687,7 +1692,7 @@ function viewCentros() {
         sectionTitle('Atención Veterinaria'),
         h('div',{class:'grid-2'},[
           (()=>{ const c=h('div',{class:'centro-card'}); c.innerHTML='<h4>Veterinarias gratuitas — CABA</h4><p>Centros fijos y móviles, castración y vacunación</p>'; const a=h('a',{href:'https://buenosaires.gob.ar/agenciaambiental/mascotas/atencion-veterinaria-y-castraciones-gratuitas',target:'_blank',rel:'noopener'},'Ver cronograma'); c.appendChild(a); return c; })(),
-          (()=>{ const c=h('div',{class:'centro-card'}); c.innerHTML='<h4>Vacunación antirrábica — CABA</h4><p>Operativos gratuitos en distintos barrios</p>'; const a=h('a',{href:'https://buenosaires.gob.ar/agenciaambiental/animals',target:'_blank',rel:'noopener'},'Ver operativos'); c.appendChild(a); return c; })(),
+          (()=>{ const c=h('div',{class:'centro-card'}); c.innerHTML='<h4>Vacunación antirrábica — CABA</h4><p>Operativos gratuitos en distintos barrios</p>'; const a=h('a',{href:'https://buenosaires.gob.ar/agenciaambiental/mascotas/atencion-veterinaria-y-castraciones-gratuitas',target:'_blank',rel:'noopener'},'Ver operativos'); c.appendChild(a); return c; })(),
         ]),
       ]),
     ]),
@@ -1798,8 +1803,8 @@ function viewMiSalud() {
       +'<p style="color:var(--color-text-muted);margin-bottom:1.5rem;">Completá tu perfil con Auxi para ver tu información de salud personalizada.</p>';
     var auxiBtn = h('button',{class:'btn btn--primary',onclick:function(){
       auxiState={step:'perfil_nombre',data:{destino:'/mi-salud'},expr:'caring',history:[]};
+      auxiSkipReset = true;
       navigate('/');
-      setTimeout(function(){renderAuxi();},100);
     }},'Crear mi perfil con Auxi');
     noPerfil.appendChild(auxiBtn);
     mc.appendChild(noPerfil);
@@ -2134,10 +2139,10 @@ const searchIndex = [
   {t:'INADI · discriminación · orientación sexual',s:'esi',tag:'ESI'},
   {t:'ESI · educación sexual integral · Ley 26.150',s:'esi',tag:'ESI'},
   // Mascotas
-  {t:'Veterinarias gratuitas · animals · CABA',s:'veterinarias',tag:'Animales'},
+  {t:'Veterinarias gratuitas · mascotas · CABA',s:'veterinarias',tag:'Animales'},
   {t:'Castración gratuita · perros · gatos',s:'veterinarias',tag:'Animales'},
-  {t:'Vacunación antirrábica · animals',s:'vacunacion-animals',tag:'Animales'},
-  {t:'Primeros auxilios animals · atragantamiento',s:'pa-animals',tag:'Animales'},
+  {t:'Vacunación antirrábica · mascotas',s:'vacunacion-animals',tag:'Animales'},
+  {t:'Primeros auxilios para mascotas · atragantamiento',s:'pa-animals',tag:'Animales'},
   {t:'Intoxicación animal · veneno animal',s:'pa-animals',tag:'Animales'},
   {t:'Móviles veterinarios · barrios CABA',s:'veterinarias',tag:'Animales'},
   // Donaciones
