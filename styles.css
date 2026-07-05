@@ -1,3 +1,4 @@
+
 /* ============ TOKENS ============ */
 :root {
   /* Paleta: burdeos sereno + neutros cálidos */
@@ -760,6 +761,21 @@ tbody td { padding: 7px 12px; color: var(--color-text); }
 :root:not([data-theme="dark"]) .app-footer strong { color: var(--color-text); }
 :root:not([data-theme="dark"]) .app-footer a { color: var(--primario); }
 :root:not([data-theme="dark"]) .app-footer a:hover { color: var(--primario-medio); }
+
+/* ============ FILTRO DE EDAD (chips) ============ */
+.edad-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 0.9rem; }
+.edad-chip {
+  background: var(--color-surface); border: 1.5px solid var(--borde);
+  color: var(--color-text); border-radius: 50px; padding: 6px 14px;
+  font-size: 0.78rem; font-weight: 600; cursor: pointer;
+  font-family: var(--font-body); transition: background 0.14s, border-color 0.14s, color 0.14s;
+}
+.edad-chip:hover { border-color: var(--primario); color: var(--primario); }
+.edad-chip--active { background: var(--primario); border-color: var(--primario); color: #fff; }
+body.high-contrast .edad-chip { background: #000; color: #fff; border: 2px solid #fff; }
+body.high-contrast .edad-chip--active { background: #fff; color: #000; border-color: #fff; }
+html:not([data-theme="dark"]) body.high-contrast .edad-chip { background: #fff; color: #000; border: 2px solid #000; }
+html:not([data-theme="dark"]) body.high-contrast .edad-chip--active { background: #000; color: #fff; border-color: #000; }
 
 /* ============ MAPAS / CAL LINKS ============ */
 .mapa-link {

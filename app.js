@@ -1,11 +1,68 @@
+
 /* ============ PREFS ============ */
 function savePrefs(key, val) { try { localStorage.setItem('aux_'+key, JSON.stringify(val)); } catch(e){} }
 function getPrefs(key, def) { try { const v=localStorage.getItem('aux_'+key); return v!==null?JSON.parse(v):def; } catch(e){return def;} }
 
 /* ============ USER PROFILE ============ */
 function getUser() { return getPrefs('user_v2', null); }
-function saveUser(u) { savePrefs('user_v2', u); }
+function saveUser(u) {
+  savePrefs('user_v2', u);
+  if (u && u.edad !== undefined && u.edad !== '' && !isNaN(parseInt(u.edad))) {
+    setEdadFiltro(edadNumARango(parseInt(u.edad)));
+  }
+}
 function clearUser() { try{localStorage.removeItem('aux_user_v2');}catch(e){} }
+
+/* ============ FILTRO DE EDAD (rango) ============
+   Se alimenta de dos fuentes: la pregunta rápida que hace Auxi al inicio
+   de la charla ("¿cuántos años tenés?") o la edad exacta guardada en el
+   perfil completo. Sirve para resaltar/organizar recursos por etapa de vida
+   en las páginas de categorías, sin necesidad de crear un perfil completo. */
+var EDAD_RANGOS = [
+  {key:'ninez', label:'0 a 12 años'},
+  {key:'adolescencia', label:'13 a 17 años'},
+  {key:'adultez', label:'18 a 39 años'},
+  {key:'adultez-media', label:'40 a 64 años'},
+  {key:'mayores', label:'65 años o más'},
+];
+function edadNumARango(edad) {
+  if (edad <= 12) return 'ninez';
+  if (edad <= 17) return 'adolescencia';
+  if (edad <= 39) return 'adultez';
+  if (edad <= 64) return 'adultez-media';
+  return 'mayores';
+}
+function edadRangoLabel(key) {
+  var r = EDAD_RANGOS.find(function(r){ return r.key===key; });
+  return r ? r.label : '';
+}
+function setEdadFiltro(rango) { savePrefs('edad_filtro', rango); }
+function getEdadFiltro() {
+  var r = getPrefs('edad_filtro', null);
+  if (r === 'todas') return null; // el usuario eligió explícitamente ver todo
+  if (r) return r;
+  var u = getUser();
+  if (u && u.edad !== undefined && u.edad !== '' && !isNaN(parseInt(u.edad))) {
+    return edadNumARango(parseInt(u.edad));
+  }
+  return null;
+}
+// Chips para elegir/cambiar el rango de edad manualmente en cualquier categoría
+function edadFiltroChips() {
+  var actual = getEdadFiltro();
+  var wrap = h('div',{class:'edad-chips'});
+  var todosChip = h('button',{class:'edad-chip'+(!actual?' edad-chip--active':''),onclick:function(){
+    setEdadFiltro('todas'); renderRoute();
+  }},'Todas las edades');
+  wrap.appendChild(todosChip);
+  EDAD_RANGOS.forEach(function(r){
+    var btn = h('button',{class:'edad-chip'+(actual===r.key?' edad-chip--active':''),onclick:function(){
+      setEdadFiltro(r.key); renderRoute();
+    }},r.label);
+    wrap.appendChild(btn);
+  });
+  return wrap;
+}
 
 /* ============ ROUTER ============ */
 function navigate(path) {
@@ -278,9 +335,28 @@ function renderAuxi() {
   else if (step === 'role') {
     setAuxiExpr('caring');
     bubble.innerHTML = '<p>Antes de empezar, ¿sos mayor de 18 años o estás acompañado/a por un adulto responsable?</p>';
-    addBtn(btns,'Sí, soy mayor de edad','primary',()=>{ auxiState.data.esMayor=true; goToStep('role_tipo','caring'); });
-    addBtn(btns,'Soy menor y estoy acompañado/a','',()=>{ auxiState.data.esMayor=false; goToStep('role_tipo','caring'); });
+    addBtn(btns,'Sí, soy mayor de edad','primary',()=>{ auxiState.data.esMayor=true; goToStep('role_edad_rango','caring'); });
+    addBtn(btns,'Soy menor y estoy acompañado/a','',()=>{ auxiState.data.esMayor=false; goToStep('role_edad_rango','caring'); });
     addBtn(btns,'Soy menor y estoy solo/a','',()=>{ auxiState.data.esMayor=false; auxiState.data.soloMenor=true; goToStep('menor_solo','caring'); });
+    addBtn(btns,'← Volver','',()=>goBack());
+  }
+
+  // Rango de edad — alimenta el filtro de edad usado en las categorías
+  else if (step === 'role_edad_rango') {
+    setAuxiExpr('caring');
+    var esMayorEdad = auxiState.data.esMayor;
+    bubble.innerHTML = '<p>¿Cuántos años tenés? Así te muestro recursos más específicos para tu edad.</p>';
+    var rangoOpciones = esMayorEdad
+      ? [['18 a 39 años','adultez'],['40 a 64 años','adultez-media'],['65 años o más','mayores']]
+      : [['0 a 12 años','ninez'],['13 a 17 años','adolescencia']];
+    rangoOpciones.forEach(function(o){
+      addBtn(btns, o[0], '', function(){
+        auxiState.data.edadRango = o[1];
+        setEdadFiltro(o[1]);
+        goToStep('role_tipo','caring');
+      });
+    });
+    addBtn(btns,'Prefiero no decir','',()=>goToStep('role_tipo','caring'));
     addBtn(btns,'← Volver','',()=>goBack());
   }
 
@@ -740,6 +816,7 @@ function renderAuxi() {
     setAuxiExpr('caring');
     bubble.innerHTML = `<p>¿Cómo te llamás? <span style="color:#a8a29e;font-size:0.82rem;">(podés omitirlo)</span></p>`;
     addFieldStep(btns,'Tu nombre...','nombre','perfil_edad');
+    addBtn(btns,'← Volver al inicio','',()=>{ auxiState={step:'welcome',data:{},expr:'happy',history:[]}; renderAuxi(); });
   }
   else if (step === 'perfil_edad') {
     setAuxiExpr('caring');
@@ -812,13 +889,13 @@ function renderAuxi() {
   robotEl.innerHTML = AUXI_SVG(auxiState.expr);
   // Añadir botón TTS a la burbuja de Auxi si hay texto
   if (ttsSupported()) {
+    var bubbleText = bubble.innerText || bubble.textContent;
     var ttsBtn = document.createElement('button');
     ttsBtn.className = 'tts-btn';
     ttsBtn.style.cssText = 'margin-top:8px;font-size:0.72rem;';
     ttsBtn.textContent = '🔊 Escuchar';
     ttsBtn.addEventListener('click', function(){
-      var text = bubble.innerText || bubble.textContent;
-      ttsSpeak(text);
+      ttsSpeak(bubbleText);
     });
     bubble.appendChild(ttsBtn);
   }
@@ -949,38 +1026,40 @@ function viewCategorias() {
 
 /* ============ FILTRO POR EDAD ============ */
 function edadBanner(categoria) {
-  var user = getUser();
-  if (!user || !user.edad) return null;
-  var edad = parseInt(user.edad)||0;
+  var rango = getEdadFiltro();
+  if (!rango) return null;
   var mensajes = {
-    'salud-fisica': [
-      [0,12,'Para niñes de 0 a 12 años el pediatra es el referente principal. En los CeSAC podés acceder a controles de crecimiento, vacunas y atención primaria sin turno previo y de forma gratuita.'],
-      [13,17,'En la adolescencia aparecen necesidades específicas: vacuna HPV, salud sexual y reproductiva, y atención sin que tus padres tengan que estar presentes si preferís privacidad.'],
-      [18,39,'Los adultos jóvenes suelen no hacerse controles. Te recomendamos: presión arterial anual, vacuna antigripal si tenés factores de riesgo, y chequeo de colesterol a partir de los 25.'],
-      [40,64,'A partir de los 40 el riesgo cardiovascular aumenta. Es clave controlar presión, glucemia y colesterol cada año. También mamografía cada 2 años para mujeres desde los 40.'],
-      [65,120,'PAMI cubre tu atención sin costo. Las personas mayores tienen mayor riesgo de caídas, aislamiento y enfermedades crónicas. Priorizá vacunas antineumocócica, antigripal y refuerzo COVID.'],
-    ],
-    'salud-mental': [
-      [0,12,'En la niñez los problemas de salud mental se expresan diferente: cambios de conducta, dificultades escolares o en el sueño pueden ser señales. El Hospital Tobar García tiene atención especializada gratuita.'],
-      [13,17,'La adolescencia es una etapa de alta vulnerabilidad emocional. Si estás pasando un momento difícil, la línea 135 es gratuita, confidencial y disponible ahora mismo. No tenés que estar en crisis para llamar.'],
-      [18,39,'La ansiedad y el estrés son muy frecuentes en adultos jóvenes, especialmente en contextos de incertidumbre laboral o social. Hay psicólogos gratuitos en los CeSAC de CABA sin necesidad de obra social.'],
-      [40,64,'Los cambios hormonales, el cuidado de hijos/padres y la presión laboral pueden afectar la salud mental en esta etapa. No estás solo/a: podés acceder a psicólogos en hospitales públicos de forma gratuita.'],
-      [65,120,'El aislamiento social, la pérdida de seres queridos y los cambios físicos pueden impactar la salud mental en adultos mayores. Los centros de día de CABA ofrecen actividades gratuitas y contención.'],
-    ],
-    'animales': [
-      [0,120,'La castración y la vacunación antirrábica son gratuitas en CABA para perros y gatos. Además de ser obligatoria por ley, la vacuna antirrábica protege tanto a tu animal como a tu familia.'],
-    ],
+    'salud-fisica': {
+      'ninez':'Para niñes de 0 a 12 años el pediatra es el referente principal. En los CeSAC podés acceder a controles de crecimiento, vacunas y atención primaria sin turno previo y de forma gratuita.',
+      'adolescencia':'En la adolescencia aparecen necesidades específicas: vacuna HPV, salud sexual y reproductiva, y atención sin que tus padres tengan que estar presentes si preferís privacidad.',
+      'adultez':'Los adultos jóvenes suelen no hacerse controles. Te recomendamos: presión arterial anual, vacuna antigripal si tenés factores de riesgo, y chequeo de colesterol a partir de los 25.',
+      'adultez-media':'A partir de los 40 el riesgo cardiovascular aumenta. Es clave controlar presión, glucemia y colesterol cada año. También mamografía cada 2 años para mujeres desde los 40.',
+      'mayores':'PAMI cubre tu atención sin costo. Las personas mayores tienen mayor riesgo de caídas, aislamiento y enfermedades crónicas. Priorizá vacunas antineumocócica, antigripal y refuerzo COVID.',
+    },
+    'salud-mental': {
+      'ninez':'En la niñez los problemas de salud mental se expresan diferente: cambios de conducta, dificultades escolares o en el sueño pueden ser señales. El Hospital Tobar García tiene atención especializada gratuita.',
+      'adolescencia':'La adolescencia es una etapa de alta vulnerabilidad emocional. Si estás pasando un momento difícil, la línea 135 es gratuita, confidencial y disponible ahora mismo. No tenés que estar en crisis para llamar.',
+      'adultez':'La ansiedad y el estrés son muy frecuentes en adultos jóvenes, especialmente en contextos de incertidumbre laboral o social. Hay psicólogos gratuitos en los CeSAC de CABA sin necesidad de obra social.',
+      'adultez-media':'Los cambios hormonales, el cuidado de hijos/padres y la presión laboral pueden afectar la salud mental en esta etapa. No estás solo/a: podés acceder a psicólogos en hospitales públicos de forma gratuita.',
+      'mayores':'El aislamiento social, la pérdida de seres queridos y los cambios físicos pueden impactar la salud mental en adultos mayores. Los centros de día de CABA ofrecen actividades gratuitas y contención.',
+    },
+    'animales': {
+      'ninez':'La castración y la vacunación antirrábica son gratuitas en CABA para perros y gatos. Además de ser obligatoria por ley, la vacuna antirrábica protege tanto a tu animal como a tu familia.',
+      'adolescencia':'La castración y la vacunación antirrábica son gratuitas en CABA para perros y gatos. Además de ser obligatoria por ley, la vacuna antirrábica protege tanto a tu animal como a tu familia.',
+      'adultez':'La castración y la vacunación antirrábica son gratuitas en CABA para perros y gatos. Además de ser obligatoria por ley, la vacuna antirrábica protege tanto a tu animal como a tu familia.',
+      'adultez-media':'La castración y la vacunación antirrábica son gratuitas en CABA para perros y gatos. Además de ser obligatoria por ley, la vacuna antirrábica protege tanto a tu animal como a tu familia.',
+      'mayores':'La castración y la vacunación antirrábica son gratuitas en CABA para perros y gatos. Además de ser obligatoria por ley, la vacuna antirrábica protege tanto a tu animal como a tu familia.',
+    },
   };
   var lista = mensajes[categoria];
   if (!lista) return null;
-  var msg = null;
-  for (var i=0; i<lista.length; i++) {
-    if (edad >= lista[i][0] && edad <= lista[i][1]) { msg=lista[i][2]; break; }
-  }
+  var msg = lista[rango];
   if (!msg) return null;
-  var banner = h('div',{style:'display:flex;gap:0.75rem;align-items:flex-start;background:var(--primario-claro);border:1px solid var(--primario);border-radius:10px;padding:0.85rem 1rem;margin-bottom:1.25rem;'});
+  var user = getUser();
+  var etiquetaEdad = (user && user.edad) ? (user.edad+' años') : edadRangoLabel(rango);
+  var banner = h('div',{style:'display:flex;gap:0.75rem;align-items:flex-start;background:var(--primario-claro);border:1px solid var(--primario);border-radius:10px;padding:0.85rem 1rem;margin-bottom:1.25rem;flex-wrap:wrap;'});
   banner.innerHTML = '<span style="font-size:1.1rem;flex-shrink:0;">👤</span>'
-    +'<div><div style="font-size:0.8rem;font-weight:700;color:var(--primario);margin-bottom:2px;">Para vos · '+edad+' años</div>'
+    +'<div style="flex:1;min-width:200px;"><div style="font-size:0.8rem;font-weight:700;color:var(--primario);margin-bottom:2px;">Para vos · '+etiquetaEdad+'</div>'
     +'<div style="font-size:0.82rem;color:var(--color-text);">'+msg+'</div></div>'
     +'<a href="#/mi-salud" onclick="navigate(\'/mi-salud\')" style="margin-left:auto;font-size:0.72rem;font-weight:700;color:var(--primario);text-decoration:none;flex-shrink:0;align-self:center;">Mi Salud →</a>';
   return banner;
@@ -1074,6 +1153,7 @@ function viewSaludFisica() {
       `<svg viewBox="0 0 200 200" width="180" height="180" xmlns="http://www.w3.org/2000/svg"><rect x="70" y="30" width="60" height="140" rx="8" fill="rgba(255,255,255,0.18)"/><rect x="30" y="70" width="140" height="60" rx="8" fill="rgba(255,255,255,0.18)"/><rect x="82" y="42" width="36" height="116" rx="5" fill="rgba(255,255,255,0.55)"/><rect x="42" y="82" width="116" height="36" rx="5" fill="rgba(255,255,255,0.55)"/></svg>`
     ),
     h('div',{class:'main-content'},[
+      edadFiltroChips(),
       (function(){var eb=edadBanner('salud-fisica');return eb;})(),
       h('div',{class:'section-block',id:'sec-hospitales'},[
         sectionTitle('Hospitales públicos','Atención gratuita · sin obra social'),
@@ -1127,6 +1207,7 @@ function viewSaludMental() {
       `<svg viewBox="0 0 200 200" width="180" height="180" xmlns="http://www.w3.org/2000/svg"><circle cx="100" cy="85" r="55" fill="rgba(255,255,255,0.18)"/><path d="M65 85 Q65 45 100 45 Q135 45 135 85 Q135 110 115 125 L115 145 Q115 150 110 150 L90 150 Q85 150 85 145 L85 125 Q65 110 65 85Z" fill="rgba(255,255,255,0.55)"/><rect x="90" y="155" width="20" height="14" rx="3" fill="rgba(255,255,255,0.55)"/><circle cx="82" cy="78" r="5" fill="rgba(255,255,255,0.9)"/><circle cx="118" cy="78" r="5" fill="rgba(255,255,255,0.9)"/><path d="M88 97 Q100 108 112 97" stroke="rgba(255,255,255,0.9)" stroke-width="4" fill="none" stroke-linecap="round"/></svg>`
     ),
     h('div',{class:'main-content'},[
+      edadFiltroChips(),
       (function(){var eb=edadBanner('salud-mental');return eb;})(),
       h('div',{class:'aviso aviso-info'},[h('span',{},'ℹ️'),h('div',{},'Si estás en crisis ahora mismo, llamá al 135 (gratuito, 24 horas). No estás solo/a.')]),
       h('div',{class:'section-block',id:'sec-lineas'},[
@@ -1146,7 +1227,7 @@ function viewSaludMental() {
           hospCard('Hospital Tobar García','Psiquiatría · Infanto-juvenil','Ramón Carrillo 315, CABA','4305-1690'),
           hospCard('CeSAC (54 en CABA)','Atención primaria · salud mental','Según tu barrio','Ver mapa GCBA'),
         ]),
-        mapaLink('Buscá un CeSAC cerca tuyo','https://buenosaires.gob.ar/salud/cesac','Red de 54 centros en toda la Ciudad · Turnos gratuitos · Atención psicológica'),
+        (function(){ var cesacLink = mapaLink('Buscá un CeSAC cerca tuyo','https://buenosaires.gob.ar/salud/cesac','Red de 54 centros en toda la Ciudad · Turnos gratuitos · Atención psicológica'); cesacLink.style.marginTop = '10px'; return cesacLink; })(),
       ]),
       h('div',{class:'section-block'},[
         sectionTitle('Herramientas de bienestar'),
@@ -1212,6 +1293,7 @@ function viewAnimales() {
       `<svg viewBox="0 0 200 200" width="180" height="180" xmlns="http://www.w3.org/2000/svg"><ellipse cx="100" cy="120" rx="45" ry="38" fill="rgba(255,255,255,0.5)"/><circle cx="100" cy="78" r="28" fill="rgba(255,255,255,0.5)"/><ellipse cx="76" cy="60" rx="14" ry="22" fill="rgba(255,255,255,0.35)" transform="rotate(-15 76 60)"/><ellipse cx="124" cy="60" rx="14" ry="22" fill="rgba(255,255,255,0.35)" transform="rotate(15 124 60)"/><circle cx="90" cy="75" r="5" fill="rgba(255,255,255,0.9)"/><circle cx="110" cy="75" r="5" fill="rgba(255,255,255,0.9)"/><ellipse cx="100" cy="88" rx="8" ry="5" fill="rgba(255,255,255,0.8)"/></svg>`
     ),
     h('div',{class:'main-content'},[
+      edadFiltroChips(),
       (function(){var eb=edadBanner('animales');return eb;})(),
       h('div',{class:'section-block',id:'sec-veterinarias'},[
         sectionTitle('Guardias y veterinarias gratuitas','CABA y Gran Buenos Aires'),
@@ -1867,6 +1949,24 @@ function viewMiSalud() {
     mc.appendChild(card);
   });
 
+  // ---- Cómo te sentiste (guardado por Auxi) ----
+  if (user.ultima_consulta && (user.ultima_consulta.sensacion || user.ultima_consulta.desde)) {
+    mc.appendChild(h('div',{class:'section-divider',style:'margin:1.5rem 0 1rem;'}));
+    mc.appendChild(sectionTitle('Cómo te sentiste','Última vez que hablaste con Auxi sobre esto'));
+    var animoCard = h('div',{class:'salud-card'});
+    var uc = user.ultima_consulta;
+    animoCard.innerHTML = '<div class="salud-card__label">'+(uc.fecha||'')+'</div>'
+      +'<div class="salud-card__value">'+(uc.sensacion||'No especificado')+'</div>'
+      +(uc.desde?'<div style="font-size:0.78rem;color:var(--color-text-muted);margin-top:2px;">Desde: '+uc.desde+'</div>':'');
+    mc.appendChild(animoCard);
+    var hablarBtn = h('button',{class:'btn btn--outline',style:'margin-top:0.5rem;',onclick:function(){
+      auxiState={step:'sint_sensacion_mental',data:{destino:'/mi-salud',tipo_consulta:'mental'},expr:'caring',history:[]};
+      auxiSkipReset = true;
+      navigate('/');
+    }},'Contarle a Auxi cómo te sentís ahora');
+    mc.appendChild(hablarBtn);
+  }
+
   // ---- Información médica ----
   mc.appendChild(h('div',{class:'section-divider',style:'margin:1.5rem 0 1rem;'}));
   mc.appendChild(sectionTitle('Información médica'));
@@ -2444,6 +2544,8 @@ function ttsPageContent() {
   var main = document.getElementById('main-content') || document.getElementById('app-outlet');
   if (!main) { showToast('No hay contenido para leer'); return; }
   var text = main.innerText || main.textContent || '';
+  // Quitar las etiquetas de los propios botones de lectura para que no se lean a sí mismos
+  text = text.replace(/🔊\s*Escuchar/g,'').replace(/⏹\s*Detener(\s*lectura)?/g,'').replace(/🔊\s*Leer esta página/g,'');
   // Limitar a primeros 1000 chars para no cansar al usuario
   text = text.slice(0,1000).trim();
   if (!text) { showToast('No hay contenido para leer'); return; }
