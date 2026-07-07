@@ -201,7 +201,7 @@ a { color: var(--color-accent); }
 }
 :root:not([data-theme="dark"]) .logo-btn { color: var(--primario); }
 :root:not([data-theme="dark"]) .logo-ar { color: var(--primario-medio); }
-:root:not([data-theme="dark"]) .nav-links a { color: var(--gris); }
+:root:not([data-theme="dark"]) .nav-links a { color: #222; }
 :root:not([data-theme="dark"]) .nav-links a:hover { background: var(--primario-claro); color: var(--primario); }
 :root:not([data-theme="dark"]) .icon-btn { color: var(--gris); border-color: var(--borde); background: var(--gris-claro); }
 :root:not([data-theme="dark"]) .icon-btn:hover { background: var(--primario-claro); color: var(--primario); }
