@@ -1514,7 +1514,7 @@ function viewCategorias() {
         h('p',{class:'section-sub'},'Recursos gratuitos en CABA, GBA y todo el país'),
         grid,
       ]),
-      voluntariosInline(),
+    
     ]),
   ]);
 }
