@@ -3,15 +3,72 @@
 function savePrefs(key, val) { try { localStorage.setItem('aux_'+key, JSON.stringify(val)); } catch(e){} }
 function getPrefs(key, def) { try { const v=localStorage.getItem('aux_'+key); return v!==null?JSON.parse(v):def; } catch(e){return def;} }
 
-/* ============ USER PROFILE ============ */
-function getUser() { return getPrefs('user_v2', null); }
+/* ============ PERFILES (múltiples, simulado en este dispositivo) ============
+   Permite tener más de un perfil guardado a la vez (por ejemplo, el tuyo
+   y el de tu mascota) y ver/editar cada uno por separado. getUser()/saveUser()
+   siguen funcionando igual que antes: operan sobre el perfil "activo". */
+function getProfiles() { return getPrefs('profiles_v1', []); }
+function saveProfiles(list) { savePrefs('profiles_v1', list); }
+function getActiveProfileId() { return getPrefs('active_profile_id', null); }
+function setActiveProfileId(id) { savePrefs('active_profile_id', id); }
+
+function _migrarPerfilLegacy() {
+  var legacy = getPrefs('user_v2', null);
+  if (legacy && !legacy.id) {
+    legacy.id = 'p1'; legacy.tipo = legacy.tipo || 'persona';
+    saveProfiles([legacy]);
+    setActiveProfileId('p1');
+    return legacy;
+  }
+  return null;
+}
+
+function getUser() {
+  var profiles = getProfiles();
+  if (profiles.length === 0) { return _migrarPerfilLegacy(); }
+  var activeId = getActiveProfileId() || profiles[0].id;
+  return profiles.find(function(p){ return p.id === activeId; }) || profiles[0];
+}
 function saveUser(u) {
-  savePrefs('user_v2', u);
-  if (u && u.edad !== undefined && u.edad !== '' && !isNaN(parseInt(u.edad))) {
+  if (!u) return;
+  var profiles = getProfiles();
+  if (profiles.length === 0) { _migrarPerfilLegacy(); profiles = getProfiles(); }
+  if (!u.id) u.id = getActiveProfileId() || ('p'+Date.now());
+  if (!u.tipo) u.tipo = 'persona';
+  var idx = profiles.findIndex(function(p){ return p.id === u.id; });
+  if (idx === -1) profiles.push(u); else profiles[idx] = u;
+  saveProfiles(profiles);
+  setActiveProfileId(u.id);
+  savePrefs('user_v2', u); // compatibilidad hacia atrás
+  if (u.tipo === 'persona' && u.edad !== undefined && u.edad !== '' && !isNaN(parseInt(u.edad))) {
     setEdadFiltro(edadNumARango(parseInt(u.edad)));
   }
 }
-function clearUser() { try{localStorage.removeItem('aux_user_v2');}catch(e){} }
+function clearUser() {
+  // "Olvidar" el perfil activo: lo saca de la lista sin tocar los demás perfiles guardados
+  var profiles = getProfiles();
+  var activeId = getActiveProfileId();
+  var restantes = profiles.filter(function(p){ return p.id !== activeId; });
+  saveProfiles(restantes);
+  setActiveProfileId(restantes.length ? restantes[0].id : null);
+  try{localStorage.removeItem('aux_user_v2');}catch(e){}
+}
+function crearPerfilNuevo(tipo) {
+  var id = 'p'+Date.now();
+  var nuevo = { id: id, tipo: tipo };
+  var profiles = getProfiles();
+  profiles.push(nuevo);
+  saveProfiles(profiles);
+  setActiveProfileId(id);
+  return nuevo;
+}
+function eliminarPerfil(id) {
+  var profiles = getProfiles().filter(function(p){ return p.id !== id; });
+  saveProfiles(profiles);
+  if (getActiveProfileId() === id) {
+    setActiveProfileId(profiles.length ? profiles[0].id : null);
+  }
+}
 
 /* ============ FILTRO DE EDAD (rango) ============
    Se alimenta de dos fuentes: la pregunta rápida que hace Auxi al inicio
@@ -19,17 +76,15 @@ function clearUser() { try{localStorage.removeItem('aux_user_v2');}catch(e){} }
    perfil completo. Sirve para resaltar/organizar recursos por etapa de vida
    en las páginas de categorías, sin necesidad de crear un perfil completo. */
 var EDAD_RANGOS = [
-  {key:'ninez', label:'0 a 12 años'},
-  {key:'adolescencia', label:'13 a 17 años'},
-  {key:'adultez', label:'18 a 39 años'},
-  {key:'adultez-media', label:'40 a 64 años'},
-  {key:'mayores', label:'65 años o más'},
+  {key:'ninez', label:'Niñez (0 a 12 años)'},
+  {key:'adolescencia', label:'Adolescencia (13 a 17 años)'},
+  {key:'adultos', label:'Adultos (18 a 49 años)'},
+  {key:'mayores', label:'Mayores de 50 años'},
 ];
 function edadNumARango(edad) {
   if (edad <= 12) return 'ninez';
   if (edad <= 17) return 'adolescencia';
-  if (edad <= 39) return 'adultez';
-  if (edad <= 64) return 'adultez-media';
+  if (edad <= 49) return 'adultos';
   return 'mayores';
 }
 function edadRangoLabel(key) {
@@ -271,8 +326,98 @@ function goToStep(step, expr) {
   if (expr) auxiState.expr = expr;
   renderAuxi();
 }
+/* ============ SISTEMA INTERNO DE PRIORIDAD ============
+   Puntúa la conversación combinando síntomas + contexto para decidir
+   qué preguntar después y qué recurso priorizar. Es enteramente interno:
+   el usuario nunca ve puntajes, categorías ni nada que se parezca a un
+   diagnóstico — solo recibe la orientación y los recursos resultantes. */
+function calcularPrioridad(data) {
+  var score = { emergencia: 0, clinica: 0, crisisEmocional: 0, primerosAuxilios: 0 };
+  var sintomas = data.sintomas || [];
+  var zona = data.sint_zona || '';
+  var tiene = function(s){ return sintomas.indexOf(s) !== -1; };
+  var respiratorioOMareo = tiene('Dificultad para respirar') || tiene('Mareo');
+  var anguustiaOAgitacion = tiene('Angustia') || tiene('Angustia o sensación de ahogo') || tiene('Nervios o agitación');
+  var palpitaciones = tiene('Palpitaciones o el corazón acelerado');
+
+  if (tiene('Dificultad para respirar') || tiene('Angustia o sensación de ahogo')) { score.emergencia += 2; score.clinica += 1; }
+  if (tiene('Dolor') && zona === 'Pecho') { score.clinica += 2; score.emergencia += 1; }
+  if (tiene('Presión') && zona === 'Pecho') { score.emergencia += 2; score.clinica += 1; }
+  if (tiene('Mareo')) { score.clinica += 1; }
+  if (tiene('Entumecimiento')) { score.clinica += 1; }
+  if (tiene('Angustia')) { score.crisisEmocional += 2; }
+  if (tiene('Tristeza profunda o llanto')) { score.crisisEmocional += 2; }
+  if (tiene('Nervios o agitación')) { score.crisisEmocional += 1; }
+  if (tiene('Pensamientos que no puedo parar')) { score.crisisEmocional += 1; }
+  if (tiene('Sensación de que algo malo va a pasar')) { score.crisisEmocional += 1; }
+  if (palpitaciones) { score.clinica += 1; }
+
+  // Combinación de síntomas físicos — reconocer el patrón aunque nunca se
+  // haya elegido "dolor en el pecho" como opción explícita.
+  if ((tiene('Dolor') || tiene('Presión')) && respiratorioOMareo) {
+    score.emergencia += 3;
+  }
+  // Ansiedad/agitación + palpitaciones + respiración acelerada: contemplar
+  // tanto una crisis de angustia como una causa clínica, sin descartar ninguna.
+  if (anguustiaOAgitacion && (palpitaciones || tiene('Dificultad para respirar'))) {
+    score.crisisEmocional += 2;
+    score.clinica += 2;
+  }
+  // Primeros auxilios: inicio súbito + zona extremidades + sin descripción clara
+  if (tiene('No sé') && zona === 'Extremidades' && data.sint_cuando === 'Hace minutos') {
+    score.primerosAuxilios += 2;
+  }
+  return score;
+}
+function prioridadDominante(score) {
+  var max = null, maxVal = 0;
+  Object.keys(score).forEach(function(k){
+    if (score[k] > maxVal) { maxVal = score[k]; max = k; }
+  });
+  return max;
+}
+
+/* ============ OBRAS SOCIALES (simulación frontend) ============
+   Sitios oficiales reales, usados solo para enlazar — AuxiliAR nunca
+   accede a datos reales de afiliación; todo lo demás es simulado
+   y guardado únicamente en este dispositivo. */
+var OBRAS_SOCIALES = [
+  {key:'osde', nombre:'OSDE', sitio:'https://www.osde.com.ar'},
+  {key:'swiss', nombre:'Swiss Medical', sitio:'https://www.swissmedical.com.ar'},
+  {key:'galeno', nombre:'Galeno', sitio:'https://www.galeno.com.ar'},
+  {key:'medife', nombre:'Medifé', sitio:'https://www.medife.com.ar'},
+  {key:'sancor', nombre:'Sancor Salud', sitio:'https://www.sancorsalud.com.ar'},
+  {key:'omint', nombre:'Omint', sitio:'https://www.omint.com.ar'},
+  {key:'ioma', nombre:'IOMA', sitio:'https://www.ioma.gba.gov.ar'},
+  {key:'pami', nombre:'PAMI', sitio:'https://www.pami.org.ar'},
+];
+function buscarObraSocial(nombre) {
+  if (!nombre) return null;
+  var n = nombre.trim().toLowerCase();
+  return OBRAS_SOCIALES.find(function(o){ return n.indexOf(o.key) !== -1 || n.indexOf(o.nombre.toLowerCase()) !== -1; }) || null;
+}
+function generarCredencialSimulada(nombreOS, numeroAfiliado) {
+  var num = numeroAfiliado && numeroAfiliado.trim();
+  if (!num) {
+    var rand = '';
+    for (var i=0;i<10;i++) rand += Math.floor(Math.random()*10);
+    num = rand.slice(0,3)+'-'+rand.slice(3,7)+'-'+rand.slice(7,10)+' (de ejemplo)';
+  }
+  return {
+    obra_social: nombreOS,
+    numero_afiliado: num,
+    fecha_conexion: new Date().toLocaleDateString('es-AR'),
+  };
+}
+
+function esParaOtro() { return auxiState.data.para === 'otro'; }
+
 function goBack() {
-  if (auxiState.history.length === 0) return;
+  if (auxiState.history.length === 0) {
+    auxiState.step = 'welcome'; auxiState.data = {}; auxiState.expr = 'happy';
+    renderAuxi();
+    return;
+  }
   const prev = auxiState.history.pop();
   auxiState.step = prev.step;
   auxiState.expr = prev.expr;
@@ -302,22 +447,53 @@ function renderAuxi() {
     setAuxiExpr('happy');
     if (user && user.nombre) {
       bubble.innerHTML = '<p>¡Hola de nuevo, <strong>' + user.nombre + '</strong>! 😊 Soy Auxi.</p><p>¿Continuamos con tu perfil o sos otra persona?</p>';
-      addBtn(btns,'Continuar como ' + user.nombre,'primary',()=>goToStep('role','caring'));
-      addBtn(btns,'No soy ' + user.nombre,'',()=>{ clearUser(); auxiState.history=[]; goToStep('welcome_new','happy'); });
+      addBtn(btns,'Continuar como ' + user.nombre,'primary',()=>{
+        auxiState.data.nombre = user.nombre;
+        if (user.sexo) auxiState.data.sexo = user.sexo;
+        if (user.edad !== undefined && user.edad !== '' && !isNaN(parseInt(user.edad))) {
+          auxiState.data.edad = user.edad;
+          auxiState.data.edadRango = edadNumARango(parseInt(user.edad));
+          setEdadFiltro(auxiState.data.edadRango);
+          auxiState.data.esMayor = parseInt(user.edad) >= 18;
+          goToStep('role_tipo','caring');
+        } else {
+          // No tenemos la edad guardada — solo preguntamos eso, no repetimos todo
+          goToStep('role','caring');
+        }
+      });
+      addBtn(btns,'No soy ' + user.nombre,'',()=>goToStep('perfil_no_soy','caring'));
       addBtn(btns,'Necesito ayuda urgente','danger',()=>goToStep('urgente_si','alert'));
     } else {
       bubble.innerHTML = '<p>Hola. Soy <strong>Auxi</strong>, el asistente de AuxiliAR.</p><p>¿Tenés unos minutos para que te pueda orientar mejor?</p>';
       addBtn(btns,'Sí, quiero orientación','primary',()=>goToStep('role','caring'));
-      addBtn(btns,'Explorar recursos','',()=>goToStep('explore','happy'));
+      addBtn(btns,'No, prefiero explorar por mi cuenta','',()=>goToStep('explore','happy'));
       addBtn(btns,'Necesito ayuda urgente','danger',()=>goToStep('urgente_si','alert'));
     }
+  }
+
+  else if (step === 'perfil_no_soy') {
+    setAuxiExpr('happy');
+    var userAnterior = getUser();
+    var nombreAnterior = (userAnterior && userAnterior.nombre) || 'esa persona';
+    bubble.innerHTML = '<p>Sin problema. Puedo guardar el perfil de <strong>' + nombreAnterior + '</strong> para más tarde y armar uno nuevo para vos, o si preferís, lo elimino.</p>';
+    addBtn(btns,'Guardar el de ' + nombreAnterior + ' y crear uno nuevo','primary',()=>{
+      crearPerfilNuevo('persona');
+      auxiState.history=[];
+      goToStep('welcome_new','happy');
+    });
+    addBtn(btns,'Eliminar el perfil de ' + nombreAnterior,'',()=>{
+      clearUser();
+      auxiState.history=[];
+      goToStep('welcome_new','happy');
+    });
+    addBtn(btns,'← Volver','',()=>goBack());
   }
 
   else if (step === 'welcome_new') {
     setAuxiExpr('happy');
     bubble.innerHTML = '<p>¡Perfecto! Empecemos de cero.</p><p>¿Qué necesitás hoy?</p>';
-    addBtn(btns,'Quiero orientación','primary',()=>goToStep('role','caring'));
-    addBtn(btns,'Explorar recursos','',()=>goToStep('explore','happy'));
+    addBtn(btns,'Sí, quiero orientación','primary',()=>goToStep('role','caring'));
+    addBtn(btns,'No, prefiero explorar por mi cuenta','',()=>goToStep('explore','happy'));
     addBtn(btns,'Necesito ayuda urgente','danger',()=>goToStep('urgente_si','alert'));
   }
 
@@ -329,6 +505,7 @@ function renderAuxi() {
     addBtn(btns,'Ver todas las categorías','primary',()=>navigate('/categorias'));
     addBtn(btns,'Emergencias y números de ayuda','danger',()=>navigate('/categorias/emergencias'));
     addBtn(btns,'Mi Salud','',()=>navigate('/mi-salud'));
+    addBtn(btns,'← Volver','',()=>goBack());
   }
 
   // Pregunta edad (primer paso tras welcome)
@@ -346,17 +523,21 @@ function renderAuxi() {
     setAuxiExpr('caring');
     var esMayorEdad = auxiState.data.esMayor;
     bubble.innerHTML = '<p>¿Cuántos años tenés? Así te muestro recursos más específicos para tu edad.</p>';
-    var rangoOpciones = esMayorEdad
-      ? [['18 a 39 años','adultez'],['40 a 64 años','adultez-media'],['65 años o más','mayores']]
-      : [['0 a 12 años','ninez'],['13 a 17 años','adolescencia']];
-    rangoOpciones.forEach(function(o){
+    addFieldStep(btns,'Tu edad...','edad','role_sexo');
+    addBtn(btns,'← Volver','',()=>goBack());
+  }
+
+  // Sexo (opcional) — solo se usa cuando mejora la orientación (ej. controles preventivos)
+  else if (step === 'role_sexo') {
+    setAuxiExpr('caring');
+    bubble.innerHTML = '<p>Una última pregunta opcional: ¿con qué sexo te identificás? Esto solo lo uso si ayuda a orientarte mejor, por ejemplo con controles preventivos.</p>';
+    [['Femenino','femenino'],['Masculino','masculino'],['Otro','otro']].forEach(function(o){
       addBtn(btns, o[0], '', function(){
-        auxiState.data.edadRango = o[1];
-        setEdadFiltro(o[1]);
+        auxiState.data.sexo = o[1];
         goToStep('role_tipo','caring');
       });
     });
-    addBtn(btns,'Prefiero no decir','',()=>goToStep('role_tipo','caring'));
+    addBtn(btns,'Prefiero no responder','',()=>goToStep('role_tipo','caring'));
     addBtn(btns,'← Volver','',()=>goBack());
   }
 
@@ -382,6 +563,12 @@ function renderAuxi() {
   else if (step === 'role_tipo') {
     setAuxiExpr('caring');
     var esMayor = auxiState.data.esMayor !== false;
+    // Detectar automáticamente el rango de edad a partir del número ingresado
+    var edadNum = parseInt(auxiState.data.edad);
+    if (!isNaN(edadNum) && edadNum >= 0) {
+      auxiState.data.edadRango = edadNumARango(edadNum);
+      setEdadFiltro(auxiState.data.edadRango);
+    }
     bubble.innerHTML = '<p>' + (esMayor ? '¿Venís a buscar ayuda o a ofrecerla?' : '¿En qué te puedo ayudar?') + '</p>';
     addBtn(btns, 'Buscar ayuda', 'primary', ()=>goToStep('para_quien','caring'));
     if (esMayor) {
@@ -395,7 +582,7 @@ function renderAuxi() {
     setAuxiExpr('caring');
     bubble.innerHTML = `<p>¡Qué bueno! En la sección <strong>Sumate a Ayudar</strong> podés registrarte como profesional, voluntario, ONG u organización.</p>`;
     addBtn(btns,'Sumate a Ayudar','primary',()=>navigate('/sumate/ofrece'));
-    addBtn(btns,'Volver','',()=>{ auxiState.step='role'; renderAuxi(); });
+    addBtn(btns,'← Volver','',()=>goBack());
   }
 
   // Para quién
@@ -411,9 +598,31 @@ function renderAuxi() {
   // Mascota
   else if (step === 'para_animal') {
     setAuxiExpr('caring');
-    bubble.innerHTML = `<p>Encontrá veterinarias gratuitas, vacunación, castración y primeros auxilios para animales.</p>`;
-    addBtn(btns,'Ver recursos para animales','primary',()=>navigate('/categorias/animales'));
-    addBtn(btns,'Volver','',()=>{ auxiState.step='para_quien'; renderAuxi(); });
+    bubble.innerHTML = `<p>¿Qué le está pasando?</p>`;
+    addBtn(btns,'Es una emergencia (accidente, intoxicación, no puede respirar bien)','danger',()=>goToStep('animal_emergencia','alert'));
+    addBtn(btns,'Sospecho de maltrato o abandono','',()=>goToStep('animal_maltrato','caring'));
+    addBtn(btns,'Necesita vacunas, castración o un control de rutina','primary',()=>navigate('/categorias/animales'));
+    addBtn(btns,'No estoy seguro/a, quiero ver las opciones','',()=>navigate('/categorias/animales'));
+    addBtn(btns,'← Volver','',()=>goBack());
+  }
+
+  // Emergencia con un animal — sin línea gratuita 24hs equivalente al SAME, orientar con honestidad
+  else if (step === 'animal_emergencia') {
+    setAuxiExpr('alert');
+    bubble.innerHTML = '<p>Entiendo la urgencia. Para emergencias con animales no existe en Argentina una línea telefónica gratuita de emergencia equivalente al SAME.</p>'
+      + '<p style="font-size:0.83rem;color:inherit;opacity:0.85;">Lo más rápido es acercarte directamente a una guardia veterinaria de urgencias 24 hs (la mayoría son clínicas privadas con costo). Llamá antes de ir para confirmar que atienden a tu especie y que hay veterinario disponible en ese momento.</p>';
+    addBtn(btns,'Ver veterinarias y centros','primary',()=>navigate('/categorias/animales'));
+    addBtn(btns,'← Volver','',()=>goBack());
+  }
+
+  // Sospecha de maltrato o abandono — línea oficial de denuncia
+  else if (step === 'animal_maltrato') {
+    setAuxiExpr('caring');
+    bubble.innerHTML = '<p>Hiciste bien en decirlo. El maltrato animal es un delito y se puede denunciar de forma gratuita.</p>'
+      + '<p style="font-size:0.83rem;color:inherit;opacity:0.85;">La línea <strong>0800-333-7225</strong> del Gobierno de la Ciudad recibe denuncias de maltrato animal.</p>';
+    addBtn(btns,'📞 Llamar al 0800-333-7225','danger',()=>{ window.location.href='tel:08003337225'; });
+    addBtn(btns,'Ver otros recursos para animales','',()=>navigate('/categorias/animales'));
+    addBtn(btns,'← Volver','',()=>goBack());
   }
 
   // Urgente
@@ -444,26 +653,81 @@ function renderAuxi() {
     addBtn(btns, 'Algo emocional (angustia, tristeza, ansiedad)', '',
       ()=>{ auxiState.data.tipo_consulta='mental'; goToStep('sint_sensacion_mental','caring'); });
     addBtn(btns, 'No sé bien cómo describirlo', '',
-      ()=>{ auxiState.data.tipo_consulta='desconocido'; goToStep('sint_zona','caring'); });
+      ()=>{ auxiState.data.tipo_consulta='desconocido'; goToStep('contexto_no_se','caring'); });
+    addBtn(btns,'← Volver','',()=>goBack());
+  }
+
+  // Sprint 4 — acompañar cuando la persona no sabe cómo describir lo que siente
+  else if (step === 'contexto_no_se') {
+    setAuxiExpr('caring');
+    bubble.innerHTML = '<p>No hace falta que sepas exactamente qué te está ocurriendo. Contame con tus palabras qué sentís, en el cuerpo o en el ánimo, y voy a intentar orientarte igual.</p>';
+    addBtn(btns,'Sigamos','primary',()=>goToStep('sint_zona','caring'));
     addBtn(btns,'← Volver','',()=>goBack());
   }
 
   // Síntomas emocionales — rama específica
+  // Chequeo de ánimo — reconoce explícitamente lo que ya se sabe antes de volver a preguntar
+  else if (step === 'chequeo_animo') {
+    setAuxiExpr('caring');
+    var uPrev = getUser();
+    var uc = uPrev && uPrev.ultima_consulta;
+    auxiState.data.sintomas = []; // arrancamos un chequeo nuevo, no arrastramos la selección anterior
+    bubble.innerHTML = (uc && uc.sensacion)
+      ? '<p>Recuerdo que la última vez me dijiste que te sentías así: <strong>' + uc.sensacion + '</strong>' + (uc.fecha ? ' (' + uc.fecha + ')' : '') + '.</p><p>¿Cómo estás ahora? ¿Sigue igual, mejoró, o es algo distinto?</p>'
+      : '<p>Contame, ¿cómo estás ahora?</p>';
+    addBtn(btns,'Sigue parecido','primary',()=>{
+      if (uc && uc.sensacion) {
+        auxiState.data.sintomas = uc.sensacion.split(',').map(function(s){return s.trim();});
+        auxiState.data.sint_sensacion = uc.sensacion;
+        auxiState.data.sint_cuando = 'Hace mucho tiempo, viene y va';
+        goToStep('sint_resumen_mental','caring');
+      } else {
+        goToStep('sint_sensacion_mental','caring');
+      }
+    });
+    addBtn(btns,'Es distinto / contarte de nuevo','',()=>goToStep('sint_sensacion_mental','caring'));
+    addBtn(btns,'← Volver','',()=>goBack());
+  }
+
   else if (step === 'sint_sensacion_mental') {
     setAuxiExpr('caring');
-    bubble.innerHTML = '<p>¿Cómo lo describirías?</p>';
-    ['Angustia o sensación de ahogo','Tristeza profunda o llanto','Nervios o agitación','Pensamientos que no puedo parar','Sensación de que algo malo va a pasar','No sé bien cómo explicarlo'].forEach(function(s){
-      addBtn(btns, s, '', function(){
-        auxiState.data.sint_sensacion = s;
-        goToStep('sint_cuando_mental','caring');
+    if (!auxiState.data.sintomas) auxiState.data.sintomas = [];
+    var p3sm = esParaOtro();
+    bubble.innerHTML = p3sm
+      ? '<p>Vamos paso a paso.</p><p>¿Cómo describirías lo que le está pasando? Podés elegir más de una opción — muchas veces varias cosas pasan al mismo tiempo.</p>'
+      : '<p>Estoy con vos. Vamos paso a paso.</p><p>¿Cómo lo describirías? Podés elegir más de una opción — muchas veces varias cosas pasan al mismo tiempo.</p>';
+    var opcionesMentales = ['Angustia o sensación de ahogo','Tristeza profunda o llanto','Nervios o agitación','Palpitaciones o el corazón acelerado','Pensamientos que no puedo parar','Sensación de que algo malo va a pasar','No sé bien cómo explicarlo'];
+    var chipsWrapM = h('div',{style:'display:flex;flex-wrap:wrap;gap:8px;width:100%;max-width:380px;margin-bottom:6px;'});
+    opcionesMentales.forEach(function(s){
+      var isActive = auxiState.data.sintomas.indexOf(s) !== -1;
+      var chip = h('button',{class:'sint-chip'+(isActive?' sint-chip--active':'')}, s);
+      chip.addEventListener('click', function(){
+        var exclusiva = 'No sé bien cómo explicarlo';
+        var idx = auxiState.data.sintomas.indexOf(s);
+        if (s === exclusiva) { auxiState.data.sintomas = idx===-1 ? [exclusiva] : []; }
+        else {
+          var noIdx = auxiState.data.sintomas.indexOf(exclusiva);
+          if (noIdx !== -1) auxiState.data.sintomas.splice(noIdx,1);
+          if (idx === -1) auxiState.data.sintomas.push(s); else auxiState.data.sintomas.splice(idx,1);
+        }
+        renderAuxi();
       });
+      chipsWrapM.appendChild(chip);
+    });
+    btns.appendChild(chipsWrapM);
+    addBtn(btns,'Continuar','primary',function(){
+      if (auxiState.data.sintomas.length === 0) { showToast('Elegí al menos una opción'); return; }
+      auxiState.data.sint_sensacion = auxiState.data.sintomas.join(', ');
+      goToStep('sint_cuando_mental','caring');
     });
     addBtn(btns,'← Volver','',()=>goBack());
   }
 
   else if (step === 'sint_cuando_mental') {
     setAuxiExpr('caring');
-    bubble.innerHTML = '<p>¿Hace cuánto estás sintiéndote así?</p>';
+    bubble.innerHTML = esParaOtro()
+      ? '<p>¿Hace cuánto se siente así?</p>'
+      : '<p>¿Hace cuánto estás sintiéndote así?</p>';
     ['Empezó ahora o hace poco','Desde hace algunos días','Hace semanas o meses','Hace mucho tiempo, viene y va'].forEach(function(t){
       addBtn(btns, t, '', function(){
         auxiState.data.sint_cuando = t;
@@ -475,24 +739,39 @@ function renderAuxi() {
 
   else if (step === 'sint_resumen_mental') {
     setAuxiExpr('caring');
-    var s = auxiState.data.sint_sensacion || '';
-    var cuando = auxiState.data.sint_cuando || '';
-    // Hipótesis orientativa cálida
-    var msg = '<p>Gracias por contarme.</p>';
-    if (s.match(/[Aa]ngustia|[Aa]hogo|nervios|agitaci/i)) {
-      msg += '<p>Lo que describís suena a que tu sistema nervioso está muy activado. Puede ser ansiedad o una crisis de angustia — algo muy frecuente y completamente tratable.</p>';
-      auxiState.data.destino = '/categorias/salud-mental';
-    } else if (s.match(/[Tt]risteza|llanto/i)) {
-      msg += '<p>Sentirse así durante un tiempo puede ser una señal de que necesitás apoyo. No tiene nada de malo pedir ayuda.</p>';
-      auxiState.data.destino = '/categorias/salud-mental';
-    } else if (s.match(/[Pp]ensamientos|parar/i)) {
-      msg += '<p>Los pensamientos que no podemos parar son agotadores. Hay profesionales que pueden ayudarte a trabajar eso.</p>';
-      auxiState.data.destino = '/categorias/salud-mental';
+    var sintomasM = auxiState.data.sintomas || [];
+    var score = calcularPrioridad(auxiState.data);
+    var prioridad = prioridadDominante(score);
+    auxiState.data._prioridad = prioridad;
+    auxiState.data.destino = '/categorias/salud-mental';
+    var p3rm = esParaOtro();
+    var msg = p3rm
+      ? '<p>Gracias por contarme. No hace falta que sepas exactamente qué es lo que le pasa — con lo que me compartiste ya puedo orientarte.</p>'
+      : '<p>Gracias por contarme. No hace falta que sepas exactamente qué es lo que sentís — con lo que me compartiste ya puedo orientarte.</p>';
+    var tieneAngustia = sintomasM.indexOf('Angustia o sensación de ahogo') !== -1 || sintomasM.indexOf('Nervios o agitación') !== -1;
+    var tienePalpitaciones = sintomasM.indexOf('Palpitaciones o el corazón acelerado') !== -1;
+    if (score.crisisEmocional >= 2 && score.clinica >= 2) {
+      // Combinación: crisis de angustia y causa clínica son ambas posibles — no descartamos ninguna
+      msg += p3rm
+        ? '<p>Lo que describís — ' + (tieneAngustia?'la agitación':'lo que le pasa') + (tienePalpitaciones?' junto con las palpitaciones':'') + ' — puede tratarse de una crisis de angustia, algo muy frecuente y tratable. Pero como el cuerpo también se activa así ante algunas causas físicas, no está de más que lo consulten con un médico además de buscar apoyo psicológico.</p>'
+        : '<p>Lo que describís — ' + (tieneAngustia?'la agitación':'lo que sentís') + (tienePalpitaciones?' junto con las palpitaciones':'') + ' — puede tratarse de una crisis de angustia, algo muy frecuente y tratable. Pero como el cuerpo también se activa así ante algunas causas físicas, no está de más que lo converses con un médico además de buscar apoyo psicológico.</p>';
+      addBtn(btns,'📞 Llamar al 107 (por las dudas, causa física)','danger',()=>{ window.location.href='tel:107'; });
+    } else if (tieneAngustia) {
+      msg += p3rm
+        ? '<p>Lo que describís suena a que su sistema nervioso está muy activado. Puede ser ansiedad o una crisis de angustia — algo muy frecuente y completamente tratable.</p>'
+        : '<p>Lo que describís suena a que tu sistema nervioso está muy activado. Puede ser ansiedad o una crisis de angustia — algo muy frecuente y completamente tratable.</p>';
+    } else if (sintomasM.indexOf('Tristeza profunda o llanto') !== -1) {
+      msg += p3rm
+        ? '<p>Sentirse así durante un tiempo puede ser una señal de que necesita apoyo. No tiene nada de malo pedir ayuda.</p>'
+        : '<p>Sentirse así durante un tiempo puede ser una señal de que necesitás apoyo. No tiene nada de malo pedir ayuda.</p>';
+    } else if (sintomasM.indexOf('Pensamientos que no puedo parar') !== -1) {
+      msg += '<p>Los pensamientos que no se pueden parar son agotadores. Hay profesionales que pueden ayudar a trabajar eso.</p>';
     } else {
-      msg += '<p>Lo que sentís merece atención. Un profesional puede ayudarte a entenderlo mejor.</p>';
-      auxiState.data.destino = '/categorias/salud-mental';
+      msg += p3rm
+        ? '<p>Lo que le pasa merece atención. Un profesional puede ayudar a entenderlo mejor.</p>'
+        : '<p>Lo que sentís merece atención. Un profesional puede ayudarte a entenderlo mejor.</p>';
     }
-    msg += '<p style="font-size:0.8rem;color:inherit;margin-top:0.3rem;opacity:0.82;">Esto <strong>no es un diagnóstico</strong>. Solo un profesional puede orientarte correctamente.</p>';
+    msg += '<p style="font-size:0.8rem;color:inherit;margin-top:0.3rem;opacity:0.82;">Esto <strong>no es un diagnóstico</strong>. Solo un profesional puede orientar correctamente.</p>';
     bubble.innerHTML = msg;
     addBtn(btns,'📞 Llamar al 135 (salud mental)','danger',()=>{ window.location.href='tel:135'; });
     addBtn(btns,'Ver recursos de salud mental','primary',()=>navigate('/categorias/salud-mental'));
@@ -504,51 +783,109 @@ function renderAuxi() {
   else if (step === 'consulta_tipo') {
     setAuxiExpr('caring');
     bubble.innerHTML = '<p>¿Sobre qué tema necesitás ayuda?</p>';
-    // Grid de tarjetas visuales — 2 columnas, más ordenado
-    var grid = h('div',{style:'display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;max-width:380px;'});
+    // Flexbox — se adapta solo a cualquier ancho de pantalla, sin desbordes
+    var grid = h('div',{class:'consulta-tema-grid'});
     var opciones = [
       {icon:'🏥', label:'Salud física', sub:'Hospitales, guardias, vacunas',
        dest:'/categorias/salud-fisica', next:'consulta_provincia', geo:'salud-fisica'},
       {icon:'🧠', label:'Salud mental', sub:'Apoyo emocional, psicólogos',
        dest:'/categorias/salud-mental', next:'consulta_provincia', geo:'salud-mental'},
       {icon:'💚', label:'ESI y derechos', sub:'Sexual, reproductivos, identidad',
-       dest:'/categorias/esi', next:'derivado'},
+       dest:'/categorias/esi', next:'ofrecer_centros_cercanos'},
       {icon:'🩹', label:'Primeros auxilios', sub:'RCP, emergencias, guías',
-       dest:'/categorias/primeros-auxilios', next:'derivado'},
+       dest:'/categorias/primeros-auxilios', next:'ofrecer_centros_cercanos'},
       {icon:'🩸', label:'Donaciones', sub:'Sangre, órganos, plasma',
-       dest:'/categorias/donaciones', next:'derivado'},
+       dest:'/categorias/donaciones', next:'ofrecer_centros_cercanos'},
       {icon:'📋', label:'Leyes y trámites', sub:'Derechos, FAQ, gestiones',
-       dest:'/recursos-utiles', next:'derivado'},
+       dest:'/recursos-utiles', next:'ofrecer_centros_cercanos'},
     ];
     opciones.forEach(function(op){
-      var btn = h('button',{
-        class:'auxi-btn',
-        style:'flex-direction:column;align-items:flex-start;gap:3px;padding:10px 12px;border-radius:12px;text-align:left;height:auto;',
+      var btn = h('button',{class:'consulta-tema-btn',
         onclick: function(){
           auxiState.data.destino = op.dest;
           if(op.geo) auxiState.data.geoTipo = op.geo;
-          goToStep(op.next || 'derivado','caring');
+          goToStep(op.next || 'ofrecer_centros_cercanos','caring');
         }
       });
-      btn.innerHTML = '<span style="font-size:1.4rem;line-height:1;">'+op.icon+'</span>'
-        +'<span style="font-size:0.85rem;font-weight:700;line-height:1.2;">'+op.label+'</span>'
-        +'<span style="font-size:0.72rem;opacity:0.75;line-height:1.2;">'+op.sub+'</span>';
+      btn.innerHTML = '<span class="consulta-tema-icon">'+op.icon+'</span>'
+        +'<span class="consulta-tema-label">'+op.label+'</span>'
+        +'<span class="consulta-tema-sub">'+op.sub+'</span>';
       grid.appendChild(btn);
     });
     btns.appendChild(grid);
+    var otraBtn = h('button',{class:'consulta-tema-btn consulta-tema-btn--otra',onclick:()=>goToStep('consulta_libre','caring')});
+    otraBtn.innerHTML = '<span class="consulta-tema-icon">✏️</span>'
+      +'<span class="consulta-tema-label">Otra consulta</span>'
+      +'<span class="consulta-tema-sub">Escribime con tus palabras qué necesitás</span>';
+    grid.appendChild(otraBtn);
+    addBtn(btns,'← Volver','',()=>goBack());
+  }
+
+  // Casilla libre para consultas que no encajan en ninguna categoría
+  else if (step === 'consulta_libre') {
+    setAuxiExpr('caring');
+    bubble.innerHTML = '<p>Contame con tus palabras qué necesitás saber. Voy a buscarte lo más parecido en los recursos disponibles.</p>';
+    var ta = document.createElement('textarea');
+    ta.className = 'consulta-libre-textarea';
+    ta.placeholder = 'Ej: no sé a dónde ir si perdí mi medicación...';
+    ta.rows = 3;
+    btns.appendChild(ta);
+    var enviarBtn = h('button',{class:'auxi-btn auxi-btn--primary',style:'margin-top:8px;',onclick:function(){
+      var texto = ta.value.trim();
+      if (!texto) { showToast('Escribí tu consulta primero'); return; }
+      auxiState.data.consultaLibre = texto;
+      goToStep('consulta_libre_resultado','caring');
+    }});
+    enviarBtn.textContent = 'Buscar';
+    btns.appendChild(enviarBtn);
+    addBtn(btns,'← Volver','',()=>goBack());
+  }
+
+  else if (step === 'consulta_libre_resultado') {
+    setAuxiExpr('caring');
+    var texto = (auxiState.data.consultaLibre || '').toLowerCase();
+    var palabras = texto.split(/\s+/).filter(function(w){ return w.length > 3; });
+    var matches = searchIndex.filter(function(item){
+      var t = item.t.toLowerCase();
+      return palabras.some(function(w){ return t.indexOf(w) !== -1; }) || t.indexOf(texto) !== -1;
+    }).slice(0, 5);
+    if (matches.length > 0) {
+      bubble.innerHTML = '<p>Encontré esto que puede servirte:</p>';
+      matches.forEach(function(m){
+        addBtn(btns, m.t, '', function(){ irA(m.s); });
+      });
+      addBtn(btns,'Ver todas las categorías','',()=>navigate('/categorias'));
+    } else {
+      bubble.innerHTML = '<p>No encontré algo específico para eso, pero acá tenés todas las categorías disponibles — seguro alguna te sirve.</p>';
+      addBtn(btns,'Ver todas las categorías','primary',()=>navigate('/categorias'));
+    }
     addBtn(btns,'← Volver','',()=>goBack());
   }
 
   // Pregunta de provincia — para personalizar recursos
   else if (step === 'consulta_provincia') {
     setAuxiExpr('caring');
+    var p3cp = esParaOtro();
     var yaUbicacion = getUser() && getUser().ubicacion;
-    if (yaUbicacion) {
-      auxiState.data.provincia = getUser().ubicacion;
-      goToStep('derivado','satisfied');
+    // Ya la dijo en esta misma charla — confirmar en vez de repreguntar
+    if (auxiState.data.provincia) {
+      bubble.innerHTML = p3cp
+        ? `<p>Me habías dicho que está en <strong>${auxiState.data.provincia}</strong>. ¿Seguimos con eso?</p>`
+        : `<p>Me habías dicho que estás en <strong>${auxiState.data.provincia}</strong>. ¿Seguimos con eso?</p>`;
+      addBtn(btns,'Sí, es correcto','primary',()=>goToStep('ofrecer_centros_cercanos','satisfied'));
+      addBtn(btns,'Cambiarla','',()=>{ auxiState.data.provincia=''; renderAuxi(); });
+      addBtn(btns,'← Volver','',()=>goBack());
+    }
+    // Ya está en el perfil guardado — usarla sin volver a preguntar
+    else if (yaUbicacion) {
+      auxiState.data.provincia = yaUbicacion;
+      goToStep('ofrecer_centros_cercanos','satisfied');
       return;
     }
-    bubble.innerHTML = '<p>¿En qué provincia o ciudad estás? Así te muestro los recursos más cercanos.</p>'
+    else {
+    bubble.innerHTML = (p3cp
+      ? '<p>¿En qué provincia o ciudad está? Así te muestro los recursos más cercanos.</p>'
+      : '<p>¿En qué provincia o ciudad estás? Así te muestro los recursos más cercanos.</p>')
       + '<p style="font-size:0.8rem;color:inherit;opacity:0.82;">(opcional)</p>';
     var provincias = ['CABA','GBA / Gran Buenos Aires','Córdoba','Rosario','Mendoza','Otra ciudad / provincia'];
     provincias.forEach(function(p){
@@ -558,10 +895,51 @@ function renderAuxi() {
           // Mostrar aviso de cobertura nacional
           auxiState.data._aviso_cobertura = true;
         }
-        goToStep('derivado','satisfied');
+        goToStep('ofrecer_centros_cercanos','satisfied');
       });
     });
-    addBtn(btns,'Prefiero no decir','',()=>goToStep('derivado','satisfied'));
+    addBtn(btns,'Prefiero no decir','',()=>goToStep('ofrecer_centros_cercanos','satisfied'));
+    addBtn(btns,'← Volver','',()=>goBack());
+    }
+  }
+
+  // Ofrecer centros cercanos (GPS) — paso separado, no se mezcla con la pregunta de ubicación
+  else if (step === 'ofrecer_centros_cercanos') {
+    setAuxiExpr('caring');
+    var p3oc = esParaOtro();
+    // Solo tiene sentido si venimos de una categoría con búsqueda de centros
+    if (!auxiState.data.geoTipo) {
+      goToStep('ofrecer_guardar_perfil','satisfied');
+      return;
+    }
+    bubble.innerHTML = p3oc
+      ? '<p>¿Querés que busque centros cercanos usando la ubicación de este dispositivo (GPS)? Es distinto de lo que me contaste recién.</p>'
+      : '<p>¿Querés que busque centros cercanos usando la ubicación de tu dispositivo (GPS)? Es distinto de lo que me contaste recién.</p>';
+    addBtn(btns,'📍 Sí, buscar centros cercanos','primary',()=>goToStep('geo_centros','thinking'));
+    addBtn(btns,'No, gracias','',()=>goToStep('ofrecer_guardar_perfil','satisfied'));
+    addBtn(btns,'← Volver','',()=>goBack());
+  }
+
+  // Ofrecer guardar el perfil — último paso antes de ir a los recursos
+  else if (step === 'ofrecer_guardar_perfil') {
+    setAuxiExpr('satisfied');
+    const yaHayPerfil = !!(getUser() && getUser().nombre);
+    if (yaHayPerfil) {
+      navigate(auxiState.data.destino||'/categorias');
+      return;
+    }
+    var p3g2 = esParaOtro();
+    bubble.innerHTML = '<p>¡Genial!</p><p>Antes de irte, ¿te gustaría contarme un poco sobre '
+      + (p3g2 ? 'la persona a la que querés ayudar' : 'vos')
+      + ' para que pueda ayudar' + (p3g2 ? 'la' : 'te') + ' más rápido la próxima vez?</p>'
+      + '<p style="font-size:0.8rem;color:var(--gris);">Todo es opcional y queda guardado solo en tu dispositivo. 🔒</p>';
+    if (auxiState.data._aviso_cobertura) {
+      var cobertura2 = h('div',{style:'background:rgba(255,255,255,0.12);border-radius:8px;padding:8px 12px;font-size:0.78rem;color:rgba(255,255,255,0.85);margin-bottom:4px;'});
+      cobertura2.textContent = 'Algunos recursos son específicos de CABA. Los marcados como "Nacional" aplican en todo el país.';
+      btns.appendChild(cobertura2);
+    }
+    addBtn(btns, p3g2 ? 'Sí, quiero contarte sobre esa persona' : 'Sí, quiero contarte sobre mí', 'primary', ()=>goToStep('perfil_nombre','caring'));
+    addBtn(btns,'No, prefiero no configurar perfil','',()=>goToStep('cierre','satisfied'));
     addBtn(btns,'← Volver','',()=>goBack());
   }
 
@@ -608,7 +986,7 @@ function renderAuxi() {
 
   else if (step === 'sint_zona') {
     setAuxiExpr('caring');
-    bubble.innerHTML = `<p>¿Dónde sentís el malestar?</p>`;
+    bubble.innerHTML = esParaOtro() ? `<p>¿Dónde siente el malestar?</p>` : `<p>¿Dónde sentís el malestar?</p>`;
     ['Cabeza','Pecho','Abdomen','Extremidades','Todo el cuerpo','No sé'].forEach(z=>{
       addBtn(btns, z, auxiState.data.sint_zona===z?'primary':'', ()=>{
         auxiState.data.sint_zona = z; goToStep('sint_sensacion','caring');
@@ -619,41 +997,86 @@ function renderAuxi() {
 
   else if (step === 'sint_sensacion') {
     setAuxiExpr('caring');
-    bubble.innerHTML = '<p>¿Cómo lo describirías?</p>';
-    ['Dolor','Presión','Mareo','Dificultad para respirar','Entumecimiento','Angustia','No sé'].forEach(function(s){
-      addBtn(btns, s, '', function(){
-        auxiState.data.sint_sensacion = s;
-        var orientaciones = {
-          'Dificultad para respirar': 'sint_orientacion_resp',
-          'Angustia': 'sint_orientacion_ang',
-          'Presión': 'sint_orientacion_pres',
-        };
-        goToStep(orientaciones[s] || 'sint_cuando', 'caring');
+    if (!auxiState.data.sintomas) auxiState.data.sintomas = [];
+    var p3ss = esParaOtro();
+    bubble.innerHTML = p3ss
+      ? '<p>¿Cómo describirías lo que le pasa? Podés elegir más de una opción si siente varias cosas a la vez — a veces la combinación dice más que un síntoma solo.</p>'
+      : '<p>¿Cómo lo describirías? Podés elegir más de una opción si sentís varias cosas a la vez — a veces la combinación dice más que un síntoma solo.</p>';
+    var opcionesFisicas = ['Dolor','Presión','Mareo','Dificultad para respirar','Entumecimiento','Angustia','No sé'];
+    var chipsWrap = h('div',{style:'display:flex;flex-wrap:wrap;gap:8px;width:100%;max-width:380px;margin-bottom:6px;'});
+    opcionesFisicas.forEach(function(s){
+      var isActive = auxiState.data.sintomas.indexOf(s) !== -1;
+      var chip = h('button',{class:'sint-chip'+(isActive?' sint-chip--active':'')}, s);
+      chip.addEventListener('click', function(){
+        var idx = auxiState.data.sintomas.indexOf(s);
+        if (s === 'No sé') { auxiState.data.sintomas = idx===-1 ? ['No sé'] : []; }
+        else {
+          var noIdx = auxiState.data.sintomas.indexOf('No sé');
+          if (noIdx !== -1) auxiState.data.sintomas.splice(noIdx,1);
+          if (idx === -1) auxiState.data.sintomas.push(s); else auxiState.data.sintomas.splice(idx,1);
+        }
+        renderAuxi();
       });
+      chipsWrap.appendChild(chip);
     });
+    btns.appendChild(chipsWrap);
+    addBtn(btns, 'Continuar', 'primary', function(){
+      if (auxiState.data.sintomas.length === 0) { showToast('Elegí al menos una opción, o "No sé" si no estás seguro/a'); return; }
+      auxiState.data.sint_sensacion = auxiState.data.sintomas.join(', ');
+      var score = calcularPrioridad(auxiState.data);
+      var prioridad = prioridadDominante(score);
+      auxiState.data._prioridad = prioridad;
+      var s = auxiState.data.sintomas;
+      if (prioridad === 'emergencia' && s.length > 1) {
+        goToStep('sint_orientacion_combo','alert');
+      } else if (s.indexOf('Dificultad para respirar') !== -1) {
+        goToStep('sint_orientacion_resp','alert');
+      } else if (s.indexOf('Angustia') !== -1) {
+        goToStep('sint_orientacion_ang','caring');
+      } else if (s.indexOf('Presión') !== -1) {
+        goToStep('sint_orientacion_pres','alert');
+      } else {
+        goToStep('sint_cuando','caring');
+      }
+    });
+    addBtn(btns,'← Volver','',()=>goBack());
+  }
+
+  // Combinación de síntomas que, juntos, ameritan más atención que por separado
+  else if (step === 'sint_orientacion_combo') {
+    setAuxiExpr('alert');
+    var s = (auxiState.data.sintomas||[]).join(', ').toLowerCase();
+    bubble.innerHTML = '<p>Por lo que me contás — ' + s + ' — me preocupa que esta situación pueda requerir atención inmediata.</p>'
+      + '<p>Mientras seguimos conversando, te recomiendo comunicarte con el SAME (107).</p>'
+      + '<p style="font-size:0.8rem;color:inherit;margin-top:0.4rem;opacity:0.82;">Esto <strong>no es un diagnóstico</strong>. Solo un profesional puede evaluarte, pero ante esta combinación es mejor prevenir.</p>';
+    addBtn(btns,'📞 Llamar al 107 (SAME)','danger',()=>{ window.location.href='tel:107'; });
+    addBtn(btns,'Sigamos charlando','',()=>goToStep('sint_cuando','caring'));
+    addBtn(btns,'← Volver','',()=>goBack());
   }
 
   else if (step === 'sint_orientacion_resp') {
     setAuxiExpr('alert');
-    bubble.innerHTML = '<p>La dificultad para respirar puede tener muchas causas. En algunos casos puede necesitar atención pronto.</p><p style="font-size:0.8rem;color:inherit;margin-top:0.3rem;opacity:0.82;">Esto <strong>no es un diagnóstico</strong>. Si el malestar es intenso o empeora, llamá al 107.</p>';
+    bubble.innerHTML = '<p>Estoy con vos. La dificultad para respirar puede tener distintas causas, y algunas conviene chequearlas pronto.</p><p style="font-size:0.8rem;color:inherit;margin-top:0.3rem;opacity:0.82;">Esto <strong>no es un diagnóstico</strong>. Si el malestar es intenso o empeora, llamá al 107.</p>';
     addBtn(btns,'📞 Llamar al 107 (SAME)','danger',()=>{ window.location.href='tel:107'; });
-    addBtn(btns,'Continuar','',()=>goToStep('sint_cuando','caring'));
+    addBtn(btns,'Sigamos charlando','',()=>goToStep('sint_cuando','caring'));
     addBtn(btns,'← Volver','',()=>goBack());
   }
 
   else if (step === 'sint_orientacion_ang') {
     setAuxiExpr('caring');
-    bubble.innerHTML = '<p>La angustia puede ser una señal de que tu mente o cuerpo necesitan apoyo. Muchas veces es ansiedad — algo muy frecuente y tratable.</p><p style="font-size:0.8rem;color:inherit;opacity:0.82;margin-top:0.4rem;">Esto <strong>no es un diagnóstico</strong>. La línea 135 puede orientarte ahora mismo.</p>';
+    bubble.innerHTML = esParaOtro()
+      ? '<p>La angustia puede ser una señal de que necesita apoyo — muchas veces es ansiedad, algo muy frecuente y tratable.</p><p style="font-size:0.8rem;color:inherit;opacity:0.82;margin-top:0.4rem;">Esto <strong>no es un diagnóstico</strong>. La línea 135 puede orientarlos ahora mismo, las 24 horas.</p>'
+      : '<p>Estoy con vos. La angustia puede ser una señal de que tu mente o cuerpo necesitan apoyo — muchas veces es ansiedad, algo muy frecuente y tratable.</p><p style="font-size:0.8rem;color:inherit;opacity:0.82;margin-top:0.4rem;">Esto <strong>no es un diagnóstico</strong>. La línea 135 puede orientarte ahora mismo, las 24 horas.</p>';
     addBtn(btns,'📞 Llamar al 135','danger',()=>{ window.location.href='tel:135'; });
-    addBtn(btns,'Continuar','',()=>goToStep('sint_cuando','caring'));
+    addBtn(btns,'Sigamos charlando','',()=>goToStep('sint_cuando','caring'));
     addBtn(btns,'← Volver','',()=>goBack());
   }
 
   else if (step === 'sint_orientacion_pres') {
     setAuxiExpr('alert');
-    bubble.innerHTML = '<p>La presión, especialmente en el pecho, puede tener distintas causas que conviene evaluar con un profesional.</p><p style="font-size:0.8rem;color:inherit;opacity:0.82;margin-top:0.4rem;">Esto <strong>no es un diagnóstico</strong>. Si la presión en el pecho es intensa, llamá al 107.</p>';
+    bubble.innerHTML = '<p>Te escucho. La presión, especialmente en el pecho, puede tener distintas causas que conviene evaluar con un profesional cuanto antes.</p><p style="font-size:0.8rem;color:inherit;opacity:0.82;margin-top:0.4rem;">Esto <strong>no es un diagnóstico</strong>. Si la presión en el pecho es intensa, llamá al 107.</p>';
     addBtn(btns,'📞 Llamar al 107 (SAME)','danger',()=>{ window.location.href='tel:107'; });
-    addBtn(btns,'Continuar','',()=>goToStep('sint_cuando','caring'));
+    addBtn(btns,'Sigamos charlando','',()=>goToStep('sint_cuando','caring'));
     addBtn(btns,'← Volver','',()=>goBack());
   }
 
@@ -661,8 +1084,9 @@ function renderAuxi() {
     setAuxiExpr('caring');
     bubble.innerHTML = `<p>¿Hace cuánto empezó?</p>`;
     ['Hace minutos','Hace horas','Hace días','No sé'].forEach(t=>{
-      addBtn(btns, t, '', ()=>{ auxiState.data.sint_cuando=t; auxiState.step='sint_resumen'; renderAuxi(); });
+      addBtn(btns, t, '', ()=>{ auxiState.data.sint_cuando=t; goToStep('sint_resumen','satisfied'); });
     });
+    addBtn(btns,'← Volver','',()=>goBack());
   }
 
   else if (step === 'sint_resumen') {
@@ -718,13 +1142,14 @@ function renderAuxi() {
     var proBtn = h('button',{class:'auxi-btn',style:'opacity:0.55;cursor:not-allowed;',onclick:function(){ showToast('Esta función estará disponible próximamente'); }});
     proBtn.innerHTML = '🩺 Solicitar acompañamiento profesional <span style="font-size:0.7rem;background:rgba(255,255,255,0.2);border-radius:4px;padding:1px 5px;margin-left:4px;">Próximamente</span>';
     btns.appendChild(proBtn);
-    addBtn(btns,'← Volver al inicio','',()=>{ auxiState={step:'welcome',data:{},expr:'happy',history:[]}; renderAuxi(); });
+    addBtn(btns,'← Volver','',()=>goBack());
   }
 
   // Tema
   else if (step === 'tema') {
     // Redirige a consulta_tipo que tiene el árbol completo
     goToStep('consulta_tipo','caring');
+    return;
   }
 
   // Centros cercanos (geolocalización por categoría)
@@ -747,32 +1172,7 @@ function renderAuxi() {
     } else {
       geoCont.innerHTML = '<p style="color:var(--gris);font-size:0.84rem;">Tu navegador no soporta geolocalización.</p>';
     }
-    addBtn(btns,'Ver todos los recursos','primary',()=>navigate(auxiState.data.destino||'/categorias'));
-    addBtn(btns,'← Volver','',()=>goBack());
-  }
-
-  // Derivado
-  else if (step === 'derivado') {
-    setAuxiExpr('satisfied');
-    const yaHayPerfil = !!(getUser() && getUser().nombre);
-    if (yaHayPerfil) {
-      // Ya tiene perfil — ir directo
-      navigate(auxiState.data.destino||'/categorias');
-      return;
-    }
-    bubble.innerHTML = '<p>¡Te llevo ahí enseguida!</p><p>Antes de irte, ¿te gustaría contarme un poco sobre vos para que pueda ayudarte más rápido la próxima vez?</p><p style="font-size:0.8rem;color:var(--gris);">Solo te llevará unos minutos. Todo es completamente opcional y queda guardado solo en tu dispositivo. 🔒</p>';
-    // Aviso de cobertura si no está en CABA/GBA
-    if (auxiState.data._aviso_cobertura) {
-      var cobertura = h('div',{style:'background:rgba(255,255,255,0.12);border-radius:8px;padding:8px 12px;font-size:0.78rem;color:rgba(255,255,255,0.85);margin-bottom:4px;'});
-      cobertura.textContent = 'Algunos recursos son específicos de CABA. Los marcados como "Nacional" aplican en todo el país.';
-      btns.appendChild(cobertura);
-    }
-    if (auxiState.data.geoTipo) {
-      addBtn(btns,'📍 Ver centros cercanos','primary',()=>goToStep('geo_centros','thinking'));
-    } else {
-      addBtn(btns,'Ver recursos','primary',()=>goToStep('cierre','satisfied'));
-    }
-    addBtn(btns,'Guardar mi información','',()=>goToStep('perfil_nombre','caring'));
+    addBtn(btns,'Continuar','primary',()=>goToStep('ofrecer_guardar_perfil','satisfied'));
     addBtn(btns,'← Volver','',()=>goBack());
   }
 
@@ -780,22 +1180,24 @@ function renderAuxi() {
   // Guardar síntomas emocionales y derivar
   else if (step === 'guardar_sint_mental') {
     setAuxiExpr('satisfied');
-    var u = getUser() || {};
-    // Guardar cómo se siente como nota en el perfil
-    u.ultima_consulta = {
-      fecha: new Date().toLocaleDateString('es-AR'),
-      sensacion: auxiState.data.sint_sensacion || '',
-      desde: auxiState.data.sint_cuando || '',
-    };
-    saveUser(u);
-    bubble.innerHTML = '<p>Guardé cómo te sentís. Podés verlo en <strong>Mi Salud</strong>.</p>'
+    var p3g = esParaOtro();
+    if (!p3g) {
+      var u = getUser() || {};
+      // Guardar cómo se siente como nota en el perfil (solo si es sobre uno mismo)
+      u.ultima_consulta = {
+        fecha: new Date().toLocaleDateString('es-AR'),
+        sensacion: auxiState.data.sint_sensacion || '',
+        desde: auxiState.data.sint_cuando || '',
+      };
+      saveUser(u);
+    }
+    bubble.innerHTML = p3g
+      ? '<p>Tomé nota de lo que me contaste sobre esta persona.</p><p style="font-size:0.83rem;color:inherit;opacity:0.85;">Te llevo a los recursos de salud mental. Recordá que la línea 135 está disponible ahora si lo necesita.</p>'
+      : '<p>Guardé cómo te sentís. Podés verlo en <strong>Mi Salud</strong>.</p>'
       + '<p style="font-size:0.83rem;color:inherit;opacity:0.85;">Te llevo a los recursos de salud mental. Recordá que la línea 135 está disponible ahora si lo necesitás.</p>';
     addBtn(btns,'Ver recursos de salud mental','primary',()=>navigate('/categorias/salud-mental'));
-    addBtn(btns,'Ir a Mi Salud','',()=>navigate('/mi-salud'));
-    addBtn(btns,'← Volver al inicio','',()=>{
-      auxiState={step:'welcome',data:{},expr:'happy',history:[]};
-      renderAuxi();
-    });
+    if (!p3g) addBtn(btns,'Ir a Mi Salud','',()=>navigate('/mi-salud'));
+    addBtn(btns,'← Volver','',()=>goBack());
   }
 
   // Cierre cálido de conversación
@@ -810,28 +1212,61 @@ function renderAuxi() {
       auxiState = { step:'role_tipo', data: Object.assign({}, auxiState.data), expr:'caring', history:[] };
       renderAuxi();
     });
+    addBtn(btns,'← Volver','',()=>goBack());
+  }
+
+  // Elegir qué tipo de perfil crear — permite tener el propio y el de una mascota a la vez
+  else if (step === 'elegir_tipo_perfil') {
+    setAuxiExpr('happy');
+    bubble.innerHTML = '<p>¿Para quién es este perfil?</p>';
+    addBtn(btns,'Para mí','primary',()=>{
+      crearPerfilNuevo('persona');
+      goToStep('perfil_nombre','caring');
+    });
+    addBtn(btns,'Para mi mascota','',()=>{
+      var nuevo = crearPerfilNuevo('mascota');
+      showToast('Perfil de mascota creado');
+      navigate('/mi-salud');
+    });
+    addBtn(btns,'← Volver','',()=>goBack());
   }
 
   else if (step === 'perfil_nombre') {
     setAuxiExpr('caring');
-    bubble.innerHTML = `<p>¿Cómo te llamás? <span style="color:#a8a29e;font-size:0.82rem;">(podés omitirlo)</span></p>`;
-    addFieldStep(btns,'Tu nombre...','nombre','perfil_edad');
-    addBtn(btns,'← Volver al inicio','',()=>{ auxiState={step:'welcome',data:{},expr:'happy',history:[]}; renderAuxi(); });
+    bubble.innerHTML = esParaOtro()
+      ? `<p>¿Cómo se llama? <span style="color:#a8a29e;font-size:0.82rem;">(podés omitirlo)</span></p>`
+      : `<p>¿Cómo te llamás? <span style="color:#a8a29e;font-size:0.82rem;">(podés omitirlo)</span></p>`;
+    addFieldStep(btns,esParaOtro()?'Su nombre...':'Tu nombre...','nombre','perfil_edad');
+    addBtn(btns,'← Volver','',()=>goBack());
   }
   else if (step === 'perfil_edad') {
     setAuxiExpr('caring');
-    bubble.innerHTML = `<p>¿Cuántos años tenés? <span style="color:#a8a29e;font-size:0.82rem;">(opcional)</span></p>`;
-    addFieldStep(btns,'Tu edad...','edad','perfil_ubicacion');
+    var p3pe = esParaOtro();
+    if (auxiState.data.edad) {
+      bubble.innerHTML = p3pe
+        ? `<p>Ya me habías dicho que tiene <strong>${auxiState.data.edad} años</strong>. ¿Seguimos con ese dato?</p>`
+        : `<p>Ya me habías dicho que tenés <strong>${auxiState.data.edad} años</strong>. ¿Seguimos con ese dato?</p>`;
+      addBtn(btns,'Sí, es correcto','primary',()=>goToStep('perfil_ubicacion','caring'));
+      addBtn(btns,'Cambiarlo','',()=>{ auxiState.data.edad=''; renderAuxi(); });
+    } else {
+      bubble.innerHTML = p3pe
+        ? `<p>¿Cuántos años tiene? <span style="color:#a8a29e;font-size:0.82rem;">(opcional)</span></p>`
+        : `<p>¿Cuántos años tenés? <span style="color:#a8a29e;font-size:0.82rem;">(opcional)</span></p>`;
+      addFieldStep(btns,p3pe?'Su edad...':'Tu edad...','edad','perfil_ubicacion');
+      addBtn(btns,'← Volver','',()=>goBack());
+    }
   }
   else if (step === 'perfil_ubicacion') {
     setAuxiExpr('caring');
     bubble.innerHTML = `<p>¿En qué zona estás? <span style="color:#a8a29e;font-size:0.82rem;">(ej: CABA, GBA, Rosario…)</span></p>`;
     addFieldStep(btns,'Tu ubicación...','ubicacion','perfil_alergias');
+    addBtn(btns,'← Volver','',()=>goBack());
   }
   else if (step === 'perfil_alergias') {
     setAuxiExpr('caring');
     bubble.innerHTML = `<p>¿Tenés alergias conocidas?</p><p style="font-size:0.78rem;color:#78716c;">Lo que me contás queda solo en tu dispositivo. Yo no tengo acceso a esta información.</p>`;
     addFieldStep(btns,'Alergias (o dejá vacío)','alergias','perfil_listo_basico');
+    addBtn(btns,'← Volver','',()=>goBack());
   }
   else if (step === 'perfil_listo_basico') {
     setAuxiExpr('satisfied');
@@ -839,51 +1274,99 @@ function renderAuxi() {
     // Guardar los 3 campos esenciales
     if (auxiState.data.nombre) usr.nombre = auxiState.data.nombre;
     if (auxiState.data.edad !== undefined) usr.edad = auxiState.data.edad;
+    if (auxiState.data.sexo !== undefined) usr.sexo = auxiState.data.sexo;
     if (auxiState.data.alergias !== undefined) usr.alergias = auxiState.data.alergias;
     saveUser(Object.assign(usr, auxiState.data));
     var nombre = usr.nombre || '';
     bubble.innerHTML = '<p>¡Listo' + (nombre ? ', <strong>' + nombre + '</strong>' : '') + '! Guardé lo esencial.</p>'
       + '<p style="font-size:0.83rem;color:inherit;opacity:0.85;margin-top:0.3rem;">Podés completar más datos médicos en <strong>Mi Salud</strong> cuando quieras.</p>';
-    addBtn(btns, 'Ver recursos', 'primary', function() {
-      navigate(auxiState.data.destino || '/categorias');
-    });
+    if ((auxiState.data.destino || '/categorias') !== '/mi-salud') {
+      addBtn(btns, 'Ver recursos', 'primary', function() {
+        navigate(auxiState.data.destino || '/categorias');
+      });
+    }
+    addBtn(btns, 'Completar más datos (obra social, DNI, etc.)', '', ()=>goToStep('perfil_enfermedades','caring'));
     addBtn(btns, 'Ir a Mi Salud', '', function() { navigate('/mi-salud'); });
-    addBtn(btns, '← Volver al inicio', '', function() {
-      auxiState = { step:'welcome', data:{}, expr:'happy', history:[] };
-      renderAuxi();
-    });
+    addBtn(btns, '← Volver', '', ()=>goBack());
   }
 
   else if (step === 'perfil_enfermedades') {
     setAuxiExpr('caring');
     bubble.innerHTML = `<p>¿Hay alguna enfermedad o condición relevante que quieras mencionar? <span style="color:#a8a29e;font-size:0.82rem;">(opcional)</span></p>`;
     addFieldStep(btns,'Enfermedades o condiciones...','enfermedades','perfil_medicacion');
+    addBtn(btns,'← Volver','',()=>goBack());
   }
   else if (step === 'perfil_medicacion') {
     setAuxiExpr('caring');
     bubble.innerHTML = `<p>¿Tomás alguna medicación regularmente? <span style="color:#a8a29e;font-size:0.82rem;">(opcional)</span></p>`;
     addFieldStep(btns,'Medicación...','medicacion','perfil_obra_social');
+    addBtn(btns,'← Volver','',()=>goBack());
   }
   else if (step === 'perfil_obra_social') {
     setAuxiExpr('caring');
     bubble.innerHTML = '<p>¿Tenés obra social o prepaga? <span style="color:#a8a29e;font-size:0.82rem;">(opcional)</span></p>';
-    addFieldStep(btns,'Obra social o prepaga...','obra_social','perfil_dni');
+    var chipsOS = h('div',{style:'display:flex;flex-wrap:wrap;gap:8px;width:100%;max-width:380px;margin-bottom:8px;'});
+    OBRAS_SOCIALES.forEach(function(o){
+      var chip = h('button',{class:'sint-chip'}, o.nombre);
+      chip.addEventListener('click', function(){
+        auxiState.data.obra_social = o.nombre;
+        goToStep('perfil_obra_social_conectar','caring');
+      });
+      chipsOS.appendChild(chip);
+    });
+    btns.appendChild(chipsOS);
+    addFieldStep(btns,'Otra (escribila)...','obra_social','perfil_dni');
+    addBtn(btns,'No tengo','',()=>{ auxiState.data.obra_social=''; goToStep('perfil_dni','caring'); });
+    addBtn(btns,'← Volver','',()=>goBack());
+  }
+
+  // Simulación frontend: "conectar" la obra social — nunca accede a datos reales
+  else if (step === 'perfil_obra_social_conectar') {
+    setAuxiExpr('caring');
+    bubble.innerHTML = '<p>¿Querés conectar tu <strong>' + auxiState.data.obra_social + '</strong> a AuxiliAR?</p>'
+      + '<p style="font-size:0.78rem;color:#a8a29e;">Esto es una simulación: no accedemos a ningún dato real de tu afiliación, solo guardamos en tu dispositivo un acceso rápido a la cartilla, el sitio oficial y una credencial de ejemplo.</p>';
+    addBtn(btns,'Sí, conectar','primary',()=>goToStep('perfil_obra_social_numero','caring'));
+    addBtn(btns,'No, gracias','',()=>goToStep('perfil_dni','caring'));
+    addBtn(btns,'← Volver','',()=>goBack());
+  }
+
+  // Número de afiliado (opcional) — para que la credencial simulada se sienta real
+  else if (step === 'perfil_obra_social_numero') {
+    setAuxiExpr('caring');
+    bubble.innerHTML = '<p>¿Cuál es tu número de afiliado? <span style="color:#a8a29e;font-size:0.82rem;">(opcional — si no lo tenés a mano, podés omitirlo)</span></p>';
+    addFieldStep(btns,'Ej: 123-4567-890...','numero_afiliado_temp','perfil_obra_social_confirmar');
+    addBtn(btns,'← Volver','',()=>goBack());
+  }
+
+  else if (step === 'perfil_obra_social_confirmar') {
+    auxiState.data.obra_social_conectada = generarCredencialSimulada(auxiState.data.obra_social, auxiState.data.numero_afiliado_temp);
+    goToStep('perfil_dni','caring');
+    return;
   }
   else if (step === 'perfil_dni') {
     setAuxiExpr('caring');
     bubble.innerHTML = '<p>¿Querés agregar tu DNI o Pasaporte? Puede ser útil para futuras gestiones médicas. <span style="color:#a8a29e;font-size:0.82rem;">(completamente opcional · queda solo en tu dispositivo)</span></p>';
     addFieldStep(btns,'DNI o Pasaporte...','dni','perfil_contacto');
+    addBtn(btns,'← Volver','',()=>goBack());
   }
   else if (step === 'perfil_contacto') {
     setAuxiExpr('caring');
     bubble.innerHTML = '<p>¿Tenés un contacto de emergencia? Podés dejarme su número de WhatsApp para avisarle rápido si lo necesitás. <span style="color:#a8a29e;font-size:0.82rem;">(opcional)</span></p>';
     addFieldStep(btns,'Ej: 5491123456789...','contacto_emergencia','perfil_listo');
+    addBtn(btns,'← Volver','',()=>goBack());
   }
   else if (step === 'perfil_listo') {
     setAuxiExpr('satisfied');
     saveUser(auxiState.data);
     bubble.innerHTML = `<p>¡Listo, <strong>${auxiState.data.nombre||'!'}</strong> Guardé tu información.</p><p>La próxima vez que me consultes voy a recordar tus datos para ayudarte mejor.</p>`;
-    addBtn(btns,'Ir a ver recursos','primary',()=>navigate(auxiState.data.destino||'/categorias'));
+    var destinoFinal = auxiState.data.destino || '/categorias';
+    if (destinoFinal === '/mi-salud') {
+      addBtn(btns,'Ver mi perfil','primary',()=>navigate('/mi-salud'));
+    } else {
+      addBtn(btns,'Ir a ver recursos','primary',()=>navigate(destinoFinal));
+      addBtn(btns,'Ver mi perfil','',()=>navigate('/mi-salud'));
+    }
+    addBtn(btns,'← Volver','',()=>goBack());
   }
 
   robotEl.innerHTML = AUXI_SVG(auxiState.expr);
@@ -898,6 +1381,16 @@ function renderAuxi() {
       ttsSpeak(bubbleText);
     });
     bubble.appendChild(ttsBtn);
+  }
+  // Acceso rápido al inicio — para no tener que apretar "← Volver" muchas veces
+  // si ya se avanzó bastante en la charla.
+  if (step !== 'welcome' && step !== 'welcome_new') {
+    var homeLink = h('button',{class:'auxi-home-link'},'🏠 Volver al inicio');
+    homeLink.addEventListener('click', function(){
+      auxiState = { step:'welcome', data:{}, expr:'happy', history:[] };
+      renderAuxi();
+    });
+    btns.appendChild(homeLink);
   }
   wrap.appendChild(titleEl);
   wrap.appendChild(robotEl);
@@ -916,17 +1409,21 @@ function addBtn(container, label, style, cb) {
 function addFieldStep(container, placeholder, dataKey, nextStep) {
   const field = h('div',{class:'auxi-field'});
   const input = h('input',{type:'text', placeholder});
-  const btn = h('button',{class:'auxi-field-btn', onclick:()=>{
+  field.appendChild(input);
+  container.appendChild(field);
+  function intentarContinuar() {
+    if (!input.value.trim()) {
+      showToast('Completá el campo, o apretá "Omitir" si preferís no responder');
+      input.focus();
+      return;
+    }
     auxiState.data[dataKey] = input.value.trim();
     auxiState.step = nextStep;
     renderAuxi();
-  }},'→');
-  field.appendChild(input);
-  field.appendChild(btn);
-  // Also allow Enter
-  input.addEventListener('keydown', e=>{ if(e.key==='Enter'){ auxiState.data[dataKey]=input.value.trim(); auxiState.step=nextStep; renderAuxi(); }});
-  container.appendChild(field);
-  // Skip button
+  }
+  input.addEventListener('keydown', e=>{ if(e.key==='Enter'){ intentarContinuar(); }});
+  // "Continuar" ahora es un botón más, al lado de "Omitir" y "← Volver" (no queda embebido en el campo)
+  addBtn(container,'Continuar','primary',intentarContinuar);
   addBtn(container,'Omitir','',()=>{ auxiState.data[dataKey]=''; auxiState.step=nextStep; renderAuxi(); });
 }
 
@@ -1032,23 +1529,14 @@ function edadBanner(categoria) {
     'salud-fisica': {
       'ninez':'Para niñes de 0 a 12 años el pediatra es el referente principal. En los CeSAC podés acceder a controles de crecimiento, vacunas y atención primaria sin turno previo y de forma gratuita.',
       'adolescencia':'En la adolescencia aparecen necesidades específicas: vacuna HPV, salud sexual y reproductiva, y atención sin que tus padres tengan que estar presentes si preferís privacidad.',
-      'adultez':'Los adultos jóvenes suelen no hacerse controles. Te recomendamos: presión arterial anual, vacuna antigripal si tenés factores de riesgo, y chequeo de colesterol a partir de los 25.',
-      'adultez-media':'A partir de los 40 el riesgo cardiovascular aumenta. Es clave controlar presión, glucemia y colesterol cada año. También mamografía cada 2 años para mujeres desde los 40.',
-      'mayores':'PAMI cubre tu atención sin costo. Las personas mayores tienen mayor riesgo de caídas, aislamiento y enfermedades crónicas. Priorizá vacunas antineumocócica, antigripal y refuerzo COVID.',
+      'adultos':'Es recomendable un control anual: presión arterial, vacuna antigripal si tenés factores de riesgo, y chequeo de colesterol. A partir de los 40 el riesgo cardiovascular aumenta, así que conviene sumar control de glucemia.',
+      'mayores':'PAMI cubre tu atención sin costo. Las personas mayores de 50 tienen mayor riesgo de enfermedades crónicas y caídas. Priorizá vacunas antineumocócica, antigripal y refuerzo COVID, y controles regulares.',
     },
     'salud-mental': {
       'ninez':'En la niñez los problemas de salud mental se expresan diferente: cambios de conducta, dificultades escolares o en el sueño pueden ser señales. El Hospital Tobar García tiene atención especializada gratuita.',
       'adolescencia':'La adolescencia es una etapa de alta vulnerabilidad emocional. Si estás pasando un momento difícil, la línea 135 es gratuita, confidencial y disponible ahora mismo. No tenés que estar en crisis para llamar.',
-      'adultez':'La ansiedad y el estrés son muy frecuentes en adultos jóvenes, especialmente en contextos de incertidumbre laboral o social. Hay psicólogos gratuitos en los CeSAC de CABA sin necesidad de obra social.',
-      'adultez-media':'Los cambios hormonales, el cuidado de hijos/padres y la presión laboral pueden afectar la salud mental en esta etapa. No estás solo/a: podés acceder a psicólogos en hospitales públicos de forma gratuita.',
-      'mayores':'El aislamiento social, la pérdida de seres queridos y los cambios físicos pueden impactar la salud mental en adultos mayores. Los centros de día de CABA ofrecen actividades gratuitas y contención.',
-    },
-    'animales': {
-      'ninez':'La castración y la vacunación antirrábica son gratuitas en CABA para perros y gatos. Además de ser obligatoria por ley, la vacuna antirrábica protege tanto a tu animal como a tu familia.',
-      'adolescencia':'La castración y la vacunación antirrábica son gratuitas en CABA para perros y gatos. Además de ser obligatoria por ley, la vacuna antirrábica protege tanto a tu animal como a tu familia.',
-      'adultez':'La castración y la vacunación antirrábica son gratuitas en CABA para perros y gatos. Además de ser obligatoria por ley, la vacuna antirrábica protege tanto a tu animal como a tu familia.',
-      'adultez-media':'La castración y la vacunación antirrábica son gratuitas en CABA para perros y gatos. Además de ser obligatoria por ley, la vacuna antirrábica protege tanto a tu animal como a tu familia.',
-      'mayores':'La castración y la vacunación antirrábica son gratuitas en CABA para perros y gatos. Además de ser obligatoria por ley, la vacuna antirrábica protege tanto a tu animal como a tu familia.',
+      'adultos':'La ansiedad y el estrés son muy frecuentes en la vida adulta, entre el trabajo, la crianza o la incertidumbre. Hay psicólogos gratuitos en los CeSAC de CABA sin necesidad de obra social.',
+      'mayores':'El aislamiento social, la pérdida de seres queridos y los cambios físicos pueden impactar la salud mental a partir de esta edad. Los centros de día de CABA ofrecen actividades gratuitas y contención.',
     },
   };
   var lista = mensajes[categoria];
@@ -1056,6 +1544,14 @@ function edadBanner(categoria) {
   var msg = lista[rango];
   if (!msg) return null;
   var user = getUser();
+  var sexo = (user && user.sexo) || auxiState.data.sexo;
+  if (categoria === 'salud-fisica' && (rango === 'adultos' || rango === 'mayores')) {
+    if (sexo === 'femenino') {
+      msg += ' Sumá también mamografía cada 2 años desde los 40 y Papanicolau anual.';
+    } else if (sexo === 'masculino' && rango === 'mayores') {
+      msg += ' A partir de los 50 conviene consultar sobre control de próstata.';
+    }
+  }
   var etiquetaEdad = (user && user.edad) ? (user.edad+' años') : edadRangoLabel(rango);
   var banner = h('div',{style:'display:flex;gap:0.75rem;align-items:flex-start;background:var(--primario-claro);border:1px solid var(--primario);border-radius:10px;padding:0.85rem 1rem;margin-bottom:1.25rem;flex-wrap:wrap;'});
   banner.innerHTML = '<span style="font-size:1.1rem;flex-shrink:0;">👤</span>'
@@ -1102,9 +1598,11 @@ function calLink(label, url, desc) {
   a.innerHTML = `<span class="cal-link-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span><div><div class="cal-link-title">${label}</div><div class="cal-link-desc">${desc}</div></div><span class="cal-link-arrow">Ver →</span>`;
   return a;
 }
-function cardEl(ic, icon, title, desc, link) {
+function cardEl(ic, icon, title, desc, link, edadTags) {
   const c = h('div',{class:'card'});
-  c.innerHTML = `<div class="card-icon ${ic}">${icon}</div><h3>${title}</h3><p>${desc}</p>${link?`<a href="${link}" target="_blank" rel="noopener">Ver más →</a>`:''}`;
+  const destacar = edadTags && getEdadFiltro() && edadTags.indexOf(getEdadFiltro()) !== -1;
+  if (destacar) { c.classList.add('card--destacada'); }
+  c.innerHTML = `${destacar?'<div class="card-badge-edad">★ Recomendado para tu edad</div>':''}<div class="card-icon ${ic}">${icon}</div><h3>${title}</h3><p>${desc}</p>${link?`<a href="${link}" target="_blank" rel="noopener">Ver más →</a>`:''}`;
   return c;
 }
 function hospCard(name, esp, addr, tel) {
@@ -1165,6 +1663,7 @@ function viewSaludFisica() {
           hospCard('Hospital Piñero','Guardia General','Varela 1301, CABA','4631-0041'),
           hospCard('Hospital Santojanni','Clínica General · Urgencias','Pilar 950, CABA','4630-0806'),
           hospCard('Hospital Tornú','Neumonología · Clínica','Combate de los Pozos 2063, CABA','4782-2531'),
+          hospCard('Hospital de Niños Ricardo Gutiérrez','Pediatría · Guardia 24 hs','Gallo 1330, CABA','4962-9247'),
         ]),
       ]),
       h('div',{class:'section-block',id:'sec-vacunas'},[
@@ -1189,9 +1688,9 @@ function viewSaludFisica() {
         sectionTitle('Programas gratuitos'),
         h('div',{class:'grid-2'},[
           cardEl('ic-verde','','Programa Remediar','Medicamentos gratuitos en CAPS para enfermedades crónicas.',null),
-          cardEl('ic-azul','','PAMI','Cobertura integral para jubilados y pensionados.','https://www.pami.org.ar'),
-          cardEl('ic-rojo','','SUMAR','Seguro público de salud para menores de 64 sin obra social.','https://www.argentina.gob.ar/salud/sumar'),
-          cardEl('ic-naranja','','Maternidad e Infancia','Plan 1000 días · Controles gratuitos durante el embarazo.',null),
+          cardEl('ic-azul','','PAMI','Cobertura integral gratuita para jubilados, pensionados y mayores de 70 sin obra social.','https://www.pami.org.ar',['mayores']),
+          cardEl('ic-rojo','','SUMAR','Seguro público de salud gratuito para quienes no tienen obra social.','https://www.argentina.gob.ar/salud/sumar',['ninez','adolescencia','adultos']),
+          cardEl('ic-naranja','','Maternidad e Infancia','Plan 1000 días · Controles gratuitos durante el embarazo y primeros años.',null,['ninez','adultos']),
         ]),
       ]),
       voluntariosInline('salud física'),
@@ -1218,16 +1717,24 @@ function viewSaludMental() {
           contactoCard('144','Violencia de género','24 hs · gratuito'),
           contactoCard('102','Niñez en riesgo','SENNAF · gratuito'),
         ]),
+        (function(){ var smr = contactoCard('0800-333-1665','Salud Mental Responde (CABA)','Orientación telefónica gratuita del Gobierno de la Ciudad'); smr.style.marginTop='8px'; return smr; })(),
       ]),
       h('div',{class:'section-block',id:'sec-salud-mental'},[
         sectionTitle('Psicólogos y centros gratuitos'),
         h('div',{class:'grid-2'},[
           hospCard('Hospital Borda','Psiquiatría · Adultos','Ramón Carrillo 375, CABA','4305-4646'),
           hospCard('Hospital Moyano','Psiquiatría · Mujeres','Brandsen 2570, CABA','4308-4600'),
-          hospCard('Hospital Tobar García','Psiquiatría · Infanto-juvenil','Ramón Carrillo 315, CABA','4305-1690'),
+          hospCard('Hospital Tobar García','Psiquiatría · Infanto-juvenil (hasta 18 años)','Ramón Carrillo 315, CABA','4305-6108'),
           hospCard('CeSAC (54 en CABA)','Atención primaria · salud mental','Según tu barrio','Ver mapa GCBA'),
         ]),
         (function(){ var cesacLink = mapaLink('Buscá un CeSAC cerca tuyo','https://buenosaires.gob.ar/salud/cesac','Red de 54 centros en toda la Ciudad · Turnos gratuitos · Atención psicológica'); cesacLink.style.marginTop = '10px'; return cesacLink; })(),
+      ]),
+      h('div',{class:'section-block',id:'sec-salud-mental-edad'},[
+        sectionTitle('Según tu etapa de vida'),
+        h('div',{class:'grid-2'},[
+          cardEl('ic-azul','','Hospital Tobar García','Especializado en niñez y adolescencia (hasta 18 años). Guardia y consultorios externos.','https://buenosaires.gob.ar/hospitaltobargarcia',['ninez','adolescencia']),
+          cardEl('ic-verde','','Centros de Día (CABA)','Espacios gratuitos de contención, actividades y socialización para mayores de 60 años.','https://buenosaires.gob.ar/vicejefatura/bienestar-integral/puntos-de-bienestar/centros-de-dia',['mayores']),
+        ]),
       ]),
       h('div',{class:'section-block'},[
         sectionTitle('Herramientas de bienestar'),
@@ -1293,8 +1800,10 @@ function viewAnimales() {
       `<svg viewBox="0 0 200 200" width="180" height="180" xmlns="http://www.w3.org/2000/svg"><ellipse cx="100" cy="120" rx="45" ry="38" fill="rgba(255,255,255,0.5)"/><circle cx="100" cy="78" r="28" fill="rgba(255,255,255,0.5)"/><ellipse cx="76" cy="60" rx="14" ry="22" fill="rgba(255,255,255,0.35)" transform="rotate(-15 76 60)"/><ellipse cx="124" cy="60" rx="14" ry="22" fill="rgba(255,255,255,0.35)" transform="rotate(15 124 60)"/><circle cx="90" cy="75" r="5" fill="rgba(255,255,255,0.9)"/><circle cx="110" cy="75" r="5" fill="rgba(255,255,255,0.9)"/><ellipse cx="100" cy="88" rx="8" ry="5" fill="rgba(255,255,255,0.8)"/></svg>`
     ),
     h('div',{class:'main-content'},[
-      edadFiltroChips(),
-      (function(){var eb=edadBanner('animales');return eb;})(),
+      h('div',{class:'section-block',id:'sec-lineas-animales'},[
+        sectionTitle('Líneas de ayuda','No existe una línea gratuita de emergencia veterinaria 24 hs equivalente al SAME — para una urgencia, la opción real es una guardia veterinaria (ver más abajo)'),
+        contactoCard('0800-333-7225','Denuncia de maltrato animal','Línea oficial y gratuita del Gobierno de la Ciudad para denunciar maltrato o abandono.'),
+      ]),
       h('div',{class:'section-block',id:'sec-veterinarias'},[
         sectionTitle('Guardias y veterinarias gratuitas','CABA y Gran Buenos Aires'),
         mapaLink('Centros veterinarios y cronograma semanal CABA','https://buenosaires.gob.ar/agenciaambiental/mascotas/atencion-veterinaria-y-castraciones-gratuitas','Gobierno de la Ciudad · 8 móviles + 2 centros fijos · Castración y vacunación gratuita'),
@@ -1868,6 +2377,132 @@ function getVacunasPorEdad(edad) {
   return vacunas;
 }
 
+function perfilSwitcher() {
+  var profiles = getProfiles();
+  var activeId = getActiveProfileId();
+  var wrap = h('div',{class:'perfil-switcher'});
+  profiles.forEach(function(p){
+    var esActivo = p.id === activeId;
+    var label = (p.tipo === 'mascota' ? '🐾 ' : '👤 ') + (p.nombre || (p.tipo==='mascota'?'Mascota sin nombre':'Sin nombre'));
+    var tab = h('button',{class:'perfil-tab'+(esActivo?' perfil-tab--active':'')}, label);
+    tab.addEventListener('click', function(){
+      if (!esActivo) { setActiveProfileId(p.id); renderRoute(); }
+    });
+    wrap.appendChild(tab);
+  });
+  var addBtnEl = h('button',{class:'perfil-tab perfil-tab--add'},'+ Agregar perfil');
+  addBtnEl.addEventListener('click', function(){
+    auxiState = { step:'elegir_tipo_perfil', data:{}, expr:'happy', history:[] };
+    auxiSkipReset = true;
+    navigate('/');
+  });
+  wrap.appendChild(addBtnEl);
+  return wrap;
+}
+
+function renderPerfilMascota(user) {
+  var wrap = h('div',{});
+  var inicial = (user.nombre||'🐾').charAt(0).toUpperCase();
+  var salHeader = h('div',{class:'salud-header'});
+  var avatar = h('div',{class:'salud-avatar'},user.nombre?inicial:'🐾');
+  var headerInfo = h('div',{});
+  headerInfo.innerHTML = '<h2 style="margin:0 0 2px;font-size:1.2rem;">'+(user.nombre||'Mi mascota')+'</h2>'
+    +'<p style="margin:0;font-size:0.82rem;color:var(--color-text-muted);">'+(user.especie?user.especie:'')+(user.edad?' · '+user.edad+' años':'')+'</p>';
+  salHeader.appendChild(avatar);
+  salHeader.appendChild(headerInfo);
+  wrap.appendChild(salHeader);
+
+  wrap.appendChild(sectionTitle('Datos de mi mascota'));
+  function campoEditable(label, key, placeholder) {
+    var card = h('div',{class:'salud-card'});
+    var val = user[key]||'';
+    card.innerHTML = '<div class="salud-card__label">'+label+'</div>'
+      +(val?'<div class="salud-card__value">'+val+'</div>':'<div class="salud-card__empty">No completado</div>');
+    var editBtn = h('button',{class:'salud-edit-btn',style:'margin-top:6px;',onclick:function(){
+      var fwrap = document.createElement('div');
+      fwrap.className = 'salud-field-inline';
+      var inp = document.createElement('input');
+      inp.type='text'; inp.value=val; inp.placeholder=placeholder||label;
+      var saveBtn = document.createElement('button');
+      saveBtn.textContent='Guardar';
+      saveBtn.addEventListener('click',function(){
+        var u = getUser()||{};
+        u[key] = inp.value.trim();
+        saveUser(u);
+        showToast('✓ Guardado');
+        renderRoute();
+      });
+      fwrap.appendChild(inp); fwrap.appendChild(saveBtn);
+      card.appendChild(fwrap);
+      editBtn.style.display='none';
+      setTimeout(function(){inp.focus();},50);
+    }},val?'Editar':'+ Agregar');
+    card.appendChild(editBtn);
+    return card;
+  }
+  wrap.appendChild(campoEditable('Nombre','nombre','Ej: Rocco'));
+  wrap.appendChild(campoEditable('Especie','especie','Ej: Perro, gato...'));
+  wrap.appendChild(campoEditable('Edad','edad','Ej: 3'));
+  wrap.appendChild(campoEditable('Castración','castracion','Sí / No / No sé'));
+
+  // ---- Calendario de vacunación (antirrábica) ----
+  wrap.appendChild(h('div',{class:'section-divider',style:'margin:1.5rem 0 1rem;'}));
+  wrap.appendChild(sectionTitle('Vacunación antirrábica','Obligatoria por ley · gratuita en CABA'));
+  var vacCard = h('div',{class:'salud-card'});
+  var fechaVac = user.ultima_vacuna_antirrabica || '';
+  var estadoVac = null;
+  if (fechaVac) {
+    var partes = fechaVac.split('/');
+    if (partes.length === 3) {
+      var fVac = new Date(parseInt(partes[2]), parseInt(partes[1])-1, parseInt(partes[0]));
+      var unAnioDespues = new Date(fVac); unAnioDespues.setFullYear(unAnioDespues.getFullYear()+1);
+      estadoVac = (new Date() > unAnioDespues) ? 'vencida' : 'ok';
+    }
+  }
+  vacCard.innerHTML = '<div class="salud-card__label">Última aplicación</div>'
+    + (fechaVac ? '<div class="salud-card__value">'+fechaVac+'</div>' : '<div class="salud-card__empty">No completado</div>')
+    + (estadoVac === 'vencida' ? '<div style="color:var(--rojo);font-weight:700;font-size:0.8rem;margin-top:4px;">⚠️ Vencida — se recomienda renovar (se aplica cada 12 meses)</div>' : '')
+    + (estadoVac === 'ok' ? '<div style="color:var(--verde);font-weight:700;font-size:0.8rem;margin-top:4px;">✓ Al día</div>' : '');
+  var editVacBtn = h('button',{class:'salud-edit-btn',style:'margin-top:6px;',onclick:function(){
+    var fwrap = document.createElement('div');
+    fwrap.className = 'salud-field-inline';
+    var inp = document.createElement('input');
+    inp.type='text'; inp.value=fechaVac; inp.placeholder='dd/mm/aaaa';
+    var saveBtn = document.createElement('button');
+    saveBtn.textContent='Guardar';
+    saveBtn.addEventListener('click',function(){
+      var u = getUser()||{};
+      u.ultima_vacuna_antirrabica = inp.value.trim();
+      saveUser(u);
+      showToast('✓ Guardado');
+      renderRoute();
+    });
+    fwrap.appendChild(inp); fwrap.appendChild(saveBtn);
+    vacCard.appendChild(fwrap);
+    editVacBtn.style.display='none';
+    setTimeout(function(){inp.focus();},50);
+  }},fechaVac?'Editar fecha':'+ Agregar fecha');
+  vacCard.appendChild(editVacBtn);
+  wrap.appendChild(vacCard);
+  var turnoLink = mapaLink('Turno de vacunación antirrábica gratuita','https://buenosaires.gob.ar/agenciaambiental/mascotas/atencion-veterinaria-y-castraciones-gratuitas','Gobierno de la Ciudad · Centros fijos y móviles');
+  turnoLink.style.marginTop = '10px';
+  wrap.appendChild(turnoLink);
+
+  wrap.appendChild(campoEditable('Notas','notas','Alergias, condiciones, lo que quieras recordar'));
+
+  // ---- Eliminar perfil ----
+  wrap.appendChild(h('div',{class:'section-divider',style:'margin:1.5rem 0 1rem;'}));
+  var delBtn = h('button',{class:'btn btn--outline',style:'color:var(--rojo);border-color:var(--rojo);',onclick:function(){
+    if (confirm('¿Eliminar el perfil de '+(user.nombre||'esta mascota')+'? Esta acción no se puede deshacer.')) {
+      eliminarPerfil(user.id);
+      showToast('Perfil eliminado');
+      renderRoute();
+    }
+  }},'Eliminar este perfil');
+  wrap.appendChild(delBtn);
+  return wrap;
+}
+
 function viewMiSalud() {
   var user = getUser();
   var view = h('div',{class:'view'});
@@ -1877,19 +2512,27 @@ function viewMiSalud() {
   ]));
   var mc = h('div',{class:'main-content'});
 
-  if (!user || !user.nombre) {
-    // Sin perfil
+  if (getProfiles().length > 0) mc.appendChild(perfilSwitcher());
+
+  if (!user || (!user.nombre && user.tipo !== 'mascota')) {
+    // Sin perfil activo con datos
     var noPerfil = h('div',{style:'text-align:center;padding:3rem 1rem;'});
     noPerfil.innerHTML = '<div style="font-size:3rem;margin-bottom:1rem;">👤</div>'
       +'<h2 style="margin-bottom:0.5rem;">Todavía no tenés perfil</h2>'
       +'<p style="color:var(--color-text-muted);margin-bottom:1.5rem;">Completá tu perfil con Auxi para ver tu información de salud personalizada.</p>';
     var auxiBtn = h('button',{class:'btn btn--primary',onclick:function(){
-      auxiState={step:'perfil_nombre',data:{destino:'/mi-salud'},expr:'caring',history:[]};
+      auxiState={step:'perfil_nombre',data:Object.assign({},auxiState.data,{destino:'/mi-salud'}),expr:'caring',history:[]};
       auxiSkipReset = true;
       navigate('/');
     }},'Crear mi perfil con Auxi');
     noPerfil.appendChild(auxiBtn);
     mc.appendChild(noPerfil);
+    view.appendChild(mc);
+    return view;
+  }
+
+  if (user.tipo === 'mascota') {
+    mc.appendChild(renderPerfilMascota(user));
     view.appendChild(mc);
     return view;
   }
@@ -1937,8 +2580,9 @@ function viewMiSalud() {
         u[campo.key] = inp.value.trim();
         saveUser(u);
         showToast('✓ Guardado');
-        // Re-render
-        navigate('/mi-salud');
+        // Re-render (forzado: renderRoute() en vez de navigate, porque ya estamos en /mi-salud
+        // y el hash no cambia — navigate() no habría disparado el re-render)
+        renderRoute();
       });
       wrap.appendChild(inp); wrap.appendChild(saveBtn);
       card.appendChild(wrap);
@@ -1948,6 +2592,61 @@ function viewMiSalud() {
     card.appendChild(editBtn);
     mc.appendChild(card);
   });
+
+  // ---- Mi obra social (simulación frontend) ----
+  mc.appendChild(h('div',{class:'section-divider',style:'margin:1.5rem 0 1rem;'}));
+  mc.appendChild(sectionTitle('Mi obra social','Simulación — AuxiliAR no accede a datos reales de tu afiliación'));
+  if (user.obra_social_conectada) {
+    var osc = user.obra_social_conectada;
+    var osMatch = buscarObraSocial(osc.obra_social);
+    var credCard = h('div',{class:'credencial-simulada'});
+    credCard.innerHTML = '<div class="credencial-simulada__header"><span>AuxiliAR · Credencial digital (simulada)</span></div>'
+      + '<div class="credencial-simulada__nombre">'+(user.nombre||'')+'</div>'
+      + '<div class="credencial-simulada__os">'+osc.obra_social+'</div>'
+      + '<div class="credencial-simulada__num">N° afiliado (simulado): '+osc.numero_afiliado+'</div>'
+      + '<div class="credencial-simulada__fecha">Conectada el '+osc.fecha_conexion+'</div>';
+    mc.appendChild(credCard);
+    var osActions = h('div',{style:'display:flex;gap:8px;flex-wrap:wrap;margin-top:0.6rem;'});
+    if (osMatch) {
+      var btnCartilla = h('a',{href:osMatch.sitio,target:'_blank',rel:'noopener',class:'btn btn--outline',style:'flex:1;min-width:140px;text-align:center;'},'Ver cartilla médica');
+      var btnSitio = h('a',{href:osMatch.sitio,target:'_blank',rel:'noopener',class:'btn btn--outline',style:'flex:1;min-width:140px;text-align:center;'},'Sitio oficial');
+      osActions.appendChild(btnCartilla);
+      osActions.appendChild(btnSitio);
+    }
+    mc.appendChild(osActions);
+    var atencionCard = h('div',{class:'salud-card',style:'margin-top:0.6rem;'});
+    atencionCard.innerHTML = '<div class="salud-card__label">Atención al afiliado</div><div class="salud-card__value" style="font-size:0.82rem;">Para trámites, autorizaciones o reclamos, comunicate directamente con tu obra social a través de su app o sitio oficial'+(osMatch?' ('+osMatch.sitio.replace('https://www.','')+')':'')+'.</div>';
+    mc.appendChild(atencionCard);
+    var desconectarBtn = h('button',{class:'salud-edit-btn',style:'margin-top:8px;',onclick:function(){
+      var u = getUser()||{}; delete u.obra_social_conectada; saveUser(u); showToast('Desconectada'); renderRoute();
+    }},'Desconectar (simulado)');
+    mc.appendChild(desconectarBtn);
+  } else {
+    var noOsCard = h('div',{class:'salud-card'});
+    noOsCard.innerHTML = '<div class="salud-card__empty">Todavía no conectaste una obra social</div>';
+    mc.appendChild(noOsCard);
+    var conectarBtn = h('button',{class:'btn btn--outline',style:'margin-top:0.5rem;',onclick:function(){
+      var nombreOS = user.obra_social && user.obra_social.trim();
+      if (!nombreOS) { showToast('Primero completá el campo "Obra social" arriba'); return; }
+      var fwrap = document.createElement('div');
+      fwrap.className = 'salud-field-inline';
+      var inp = document.createElement('input');
+      inp.type = 'text'; inp.placeholder = 'N° de afiliado (opcional)';
+      var confirmBtn = document.createElement('button');
+      confirmBtn.textContent = 'Conectar';
+      confirmBtn.addEventListener('click', function(){
+        var u = getUser()||{};
+        u.obra_social_conectada = generarCredencialSimulada(nombreOS, inp.value.trim());
+        saveUser(u);
+        showToast('✓ Conectada (simulado)');
+        renderRoute();
+      });
+      fwrap.appendChild(inp); fwrap.appendChild(confirmBtn);
+      conectarBtn.replaceWith(fwrap);
+      setTimeout(function(){inp.focus();},50);
+    }},'Conectar mi obra social (simulado)');
+    mc.appendChild(conectarBtn);
+  }
 
   // ---- Cómo te sentiste (guardado por Auxi) ----
   if (user.ultima_consulta && (user.ultima_consulta.sensacion || user.ultima_consulta.desde)) {
@@ -1960,7 +2659,11 @@ function viewMiSalud() {
       +(uc.desde?'<div style="font-size:0.78rem;color:var(--color-text-muted);margin-top:2px;">Desde: '+uc.desde+'</div>':'');
     mc.appendChild(animoCard);
     var hablarBtn = h('button',{class:'btn btn--outline',style:'margin-top:0.5rem;',onclick:function(){
-      auxiState={step:'sint_sensacion_mental',data:{destino:'/mi-salud',tipo_consulta:'mental'},expr:'caring',history:[]};
+      var base = Object.assign({}, auxiState.data);
+      if (user.nombre && base.nombre === undefined) base.nombre = user.nombre;
+      if (user.edad && base.edad === undefined) base.edad = user.edad;
+      if (user.sexo && base.sexo === undefined) base.sexo = user.sexo;
+      auxiState={step:'chequeo_animo',data:Object.assign(base,{destino:'/mi-salud',tipo_consulta:'mental'}),expr:'caring',history:[]};
       auxiSkipReset = true;
       navigate('/');
     }},'Contarle a Auxi cómo te sentís ahora');
@@ -1989,7 +2692,7 @@ function viewMiSalud() {
       saveBtn2.textContent='Guardar';
       saveBtn2.addEventListener('click',function(){
         var u=getUser()||{}; u[campo.key]=inp.value.trim(); saveUser(u);
-        showToast('✓ Guardado'); navigate('/mi-salud');
+        showToast('✓ Guardado'); renderRoute();
       });
       wrap.appendChild(inp); wrap.appendChild(saveBtn2);
       card.appendChild(wrap); editBtn.style.display='none';
@@ -2058,6 +2761,7 @@ function viewRecursosUtiles() {
     {id:'tab-derechos', label:'Derechos del paciente'},
     {id:'tab-legal', label:'Info legal'},
     {id:'tab-tramites', label:'Trámites'},
+    {id:'tab-datos', label:'Datos y estadísticas'},
   ];
   var tabBar = h('div',{class:'tab-bar'});
   tabs.forEach(function(t,i){
@@ -2141,6 +2845,27 @@ function viewRecursosUtiles() {
   tabTram.appendChild(tramGrid);
   tabsWrap.appendChild(tabTram);
 
+  // Datos y estadísticas oficiales
+  var tabDatos = h('div',{class:'tab-panel',id:'tab-datos'});
+  tabDatos.appendChild(sectionTitle('Datos y estadísticas oficiales','Fuentes públicas verificadas — para información en tiempo real, consultá el sitio oficial'));
+  var datosGrid = h('div',{style:'display:flex;flex-direction:column;gap:0.75rem;'});
+  var datosOficiales = [
+    {t:'Censo Nacional 2022 (INDEC)', d:'Último censo de población, hogares y viviendas de Argentina. Resultados definitivos: 46.234.830 habitantes.', link:'https://censo.gob.ar/'},
+    {t:'INDEC — Instituto Nacional de Estadística y Censos', d:'Estadísticas oficiales del país: precios, empleo, pobreza, salud y más.', link:'https://www.indec.gob.ar/'},
+    {t:'Argentina.gob.ar — Datos abiertos', d:'Portal de datos públicos del Estado Nacional, incluyendo estadísticas de salud.', link:'https://datos.gob.ar/'},
+    {t:'Ministerio de Salud de la Nación', d:'Información oficial sobre programas, campañas y estadísticas sanitarias nacionales.', link:'https://www.argentina.gob.ar/salud'},
+    {t:'Estadísticas de salud (GCBA)', d:'Indicadores y reportes de salud pública de la Ciudad de Buenos Aires.', link:'https://buenosaires.gob.ar/salud'},
+  ];
+  datosOficiales.forEach(function(d){
+    var card = h('div',{class:'card'});
+    card.innerHTML = '<h3 style="font-size:0.9rem;margin:0 0 4px;">'+d.t+'</h3><p style="font-size:0.82rem;color:var(--color-text-muted);margin:0 0 8px;">'+d.d+'</p>'
+      +'<a href="'+d.link+'" target="_blank" rel="noopener" style="font-size:0.78rem;font-weight:700;color:var(--primario);text-decoration:none;">Ver fuente oficial →</a>';
+    datosGrid.appendChild(card);
+  });
+  tabDatos.appendChild(datosGrid);
+  tabDatos.appendChild(h('p',{style:'font-size:0.76rem;color:var(--gris-medio);margin-top:0.75rem;'},'Solo incluimos cifras que pudimos verificar en fuentes oficiales. Para datos actualizados, siempre es mejor consultar el sitio fuente.'));
+  tabsWrap.appendChild(tabDatos);
+
   mc.appendChild(tabsWrap);
   view.appendChild(mc);
   return view;
@@ -2149,7 +2874,7 @@ function viewRecursosUtiles() {
 function viewSobre() {
   const wrap = h('div',{class:'view'});
   const mc = h('div',{class:'main-content'});
-  const hero = h('div',{style:'background:linear-gradient(135deg,#3d0f0f,#7c2d2d,#1e1b4b);color:white;padding:2rem 1.75rem;border-radius:16px;margin-bottom:2rem;text-align:center;'});
+  const hero = h('div',{style:'background:linear-gradient(135deg,#3d0f0f,#7c2d2d,#176353,#1e1b4b);color:white;padding:2rem 1.75rem;border-radius:16px;margin-bottom:2rem;text-align:center;'});
   hero.innerHTML = `<div style="font-size:2.5rem;margin-bottom:0.5rem;">🇦🇷</div><h1 style="font-family:Georgia,serif;font-size:2rem;font-weight:700;margin:0 0 0.35rem;color:white;">Auxili<em style="color:#f9a8a8;font-style:italic;">AR</em></h1><p style="color:rgba(255,255,255,0.8);font-size:0.9rem;margin:0;">Recursos de salud gratuitos para todas las personas en Argentina</p>`;
   mc.appendChild(hero);
   mc.appendChild(h('div',{class:'aviso aviso-warn'},[h('span',{},'⚠️'),h('div',{},'AUXILIAR no sustituye la atención médica ni psicológica profesional. Ante una emergencia, llamá al 911 o al 107 (SAME).')]));
@@ -2308,7 +3033,17 @@ function applyTheme(theme) {
   currentTheme = theme;
   syncA11yPanel();
 }
-function setTheme(theme) { applyTheme(theme); savePrefs('theme',theme); }
+function setTheme(theme) {
+  applyTheme(theme);
+  savePrefs('theme',theme);
+  if (theme === 'light' && highContrast) {
+    highContrast = false;
+    applyContrast(false);
+    savePrefs('contrast', false);
+    showToast('Alto contraste desactivado — solo disponible en modo oscuro');
+  }
+  syncA11yPanel();
+}
 function toggleTheme() { setTheme(currentTheme==='dark'?'light':'dark'); }
 
 /* ============ CONTRAST ============ */
@@ -2356,6 +3091,13 @@ function syncA11yPanel() {
   // Contrast switch
   const sw=document.getElementById('a11y-contrast-sw');
   if(sw){ sw.classList.toggle('on',highContrast); sw.setAttribute('aria-pressed',String(highContrast)); }
+  const contrastRow = document.getElementById('a11y-contrast-row');
+  const contrastNote = document.getElementById('a11y-contrast-disabled-note');
+  if (contrastRow && contrastNote) {
+    const disponible = currentTheme === 'dark';
+    contrastRow.style.display = disponible ? '' : 'none';
+    contrastNote.style.display = disponible ? 'none' : '';
+  }
   // Text size and line spacing — mark active by matching onclick value
   document.querySelectorAll('.a11y-opt').forEach(btn => {
     const oc = btn.getAttribute('onclick') || '';
@@ -2546,8 +3288,8 @@ function ttsPageContent() {
   var text = main.innerText || main.textContent || '';
   // Quitar las etiquetas de los propios botones de lectura para que no se lean a sí mismos
   text = text.replace(/🔊\s*Escuchar/g,'').replace(/⏹\s*Detener(\s*lectura)?/g,'').replace(/🔊\s*Leer esta página/g,'');
-  // Limitar a primeros 1000 chars para no cansar al usuario
-  text = text.slice(0,1000).trim();
+  // Limitar para no generar audios excesivamente largos, con margen sobre el contenido más extenso del sitio
+  text = text.slice(0,4000).trim();
   if (!text) { showToast('No hay contenido para leer'); return; }
   ttsSpeak(text);
   if (btn) btn.textContent = '⏹ Detener lectura';
@@ -2558,5 +3300,9 @@ renderRoute();
 
 // Post-render
 applyTheme(currentTheme);
+if (currentTheme === 'light' && highContrast) {
+  highContrast = false;
+  savePrefs('contrast', false);
+}
 applyContrast(highContrast);
 syncA11yPanel();
