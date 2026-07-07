@@ -1,4 +1,5 @@
 # AUXILIAR
+LINK: https://cet-programacion-asistida-con-ia-2026.github.io/proyecto-equipo4-grupoB/ 
 
 Plataforma web que acompaña a las personas, paso a paso, para que encuentren rápidamente recursos de salud, asistencia y orientación en Argentina — o para que puedan sumarse como voluntarios/as y ayudar a otros.
 
