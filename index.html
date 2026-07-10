@@ -34,7 +34,7 @@
     <nav>
       <ul class="nav-links" id="navLinks">
         <li class="has-dropdown">
-          <a href="#" onclick="event.preventDefault(); navigate('/categorias')">Categorías ▾</a>
+          <a href="#" onclick="handleCategoriasClick(event, this)">Categorías ▾</a>
           <div class="nav-dropdown">
             <a href="#" onclick="event.preventDefault(); navigate('/categorias/salud-fisica')">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="2" width="6" height="20" rx="3"/><rect x="2" y="9" width="20" height="6" rx="3"/></svg>Salud Física</a>

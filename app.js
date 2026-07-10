@@ -33,16 +33,15 @@ function saveUser(u) {
   if (!u) return;
   var profiles = getProfiles();
   if (profiles.length === 0) { _migrarPerfilLegacy(); profiles = getProfiles(); }
-  if (!u.id) u.id = getActiveProfileId() || ('p'+Date.now());
+  if (!u.id) u.id = getActiveProfileId() || ('p'+Date.now()+'_'+Math.random().toString(36).slice(2,8));
   if (!u.tipo) u.tipo = 'persona';
   var idx = profiles.findIndex(function(p){ return p.id === u.id; });
   if (idx === -1) profiles.push(u); else profiles[idx] = u;
   saveProfiles(profiles);
   setActiveProfileId(u.id);
   savePrefs('user_v2', u); // compatibilidad hacia atrás
-  if (u.tipo === 'persona' && u.edad !== undefined && u.edad !== '' && !isNaN(parseInt(u.edad))) {
-    setEdadFiltro(edadNumARango(parseInt(u.edad)));
-  }
+  // El filtro de edad ahora se deriva en vivo del perfil activo (ver getEdadFiltro),
+  // así que no hace falta guardar nada acá aparte del perfil mismo.
 }
 function clearUser() {
   // "Olvidar" el perfil activo: lo saca de la lista sin tocar los demás perfiles guardados
@@ -54,7 +53,7 @@ function clearUser() {
   try{localStorage.removeItem('aux_user_v2');}catch(e){}
 }
 function crearPerfilNuevo(tipo) {
-  var id = 'p'+Date.now();
+  var id = 'p'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
   var nuevo = { id: id, tipo: tipo };
   var profiles = getProfiles();
   profiles.push(nuevo);
@@ -91,31 +90,60 @@ function edadRangoLabel(key) {
   var r = EDAD_RANGOS.find(function(r){ return r.key===key; });
   return r ? r.label : '';
 }
-function setEdadFiltro(rango) { savePrefs('edad_filtro', rango); }
+// setEdadFiltro: usado por la charla rápida con Auxi ANTES de que exista un perfil guardado
+// (queda como respaldo de sesión, de menor prioridad que un perfil real)
+function setEdadFiltro(rango) { savePrefs('edad_filtro_sesion', rango); }
+// Zona/ubicación: igual que la edad, se recuerda a nivel dispositivo aunque
+// todavía no exista un perfil guardado, para no volver a preguntarla en cada charla nueva.
+function setZonaSesion(zona) { savePrefs('zona_sesion', zona); }
+function getZonaSesion() { return getPrefs('zona_sesion', null); }
+// setEdadFiltroManual: el usuario elige explícitamente un chip — tiene la prioridad más alta
+// hasta que la cambie de nuevo o la limpie con "Todas las edades"
+function setEdadFiltroManual(rango) { savePrefs('edad_filtro_manual', rango); }
 function getEdadFiltro() {
-  var r = getPrefs('edad_filtro', null);
-  if (r === 'todas') return null; // el usuario eligió explícitamente ver todo
-  if (r) return r;
+  // 1) Elección manual explícita (chips) — siempre gana mientras esté activa
+  var manual = getPrefs('edad_filtro_manual', null);
+  if (manual === 'todas') return null;
+  if (manual) return manual;
+  // 2) El perfil actualmente activo — automático, cambia solo si cambiás de perfil
   var u = getUser();
-  if (u && u.edad !== undefined && u.edad !== '' && !isNaN(parseInt(u.edad))) {
+  if (u && u.tipo !== 'mascota' && u.edad !== undefined && u.edad !== '' && !isNaN(parseInt(u.edad))) {
     return edadNumARango(parseInt(u.edad));
   }
+  // 3) Lo que se le contó a Auxi en esta sesión, si todavía no hay perfil guardado
+  var sesion = getPrefs('edad_filtro_sesion', null);
+  if (sesion === 'todas') return null;
+  if (sesion) return sesion;
   return null;
 }
 // Chips para elegir/cambiar el rango de edad manualmente en cualquier categoría
 function edadFiltroChips() {
   var actual = getEdadFiltro();
+  var esManual = !!getPrefs('edad_filtro_manual', null) && getPrefs('edad_filtro_manual', null) !== 'todas';
   var wrap = h('div',{class:'edad-chips'});
+  function reFiltrarSinSaltar() {
+    // Mantiene la posición de lectura: no queremos que la página "salte" arriba
+    // al tocar un chip, solo se recalculan las tarjetas destacadas.
+    var scrollY = window.scrollY;
+    renderRoute();
+    window.scrollTo(0, scrollY);
+  }
   var todosChip = h('button',{class:'edad-chip'+(!actual?' edad-chip--active':''),onclick:function(){
-    setEdadFiltro('todas'); renderRoute();
+    setEdadFiltroManual('todas'); reFiltrarSinSaltar();
   }},'Todas las edades');
   wrap.appendChild(todosChip);
   EDAD_RANGOS.forEach(function(r){
     var btn = h('button',{class:'edad-chip'+(actual===r.key?' edad-chip--active':''),onclick:function(){
-      setEdadFiltro(r.key); renderRoute();
+      setEdadFiltroManual(r.key); reFiltrarSinSaltar();
     }},r.label);
     wrap.appendChild(btn);
   });
+  if (!esManual && actual) {
+    var u2 = getUser();
+    var origen = (u2 && u2.tipo!=='mascota' && u2.edad) ? 'según tu perfil ('+u2.edad+' años)' : 'según lo que le contaste a Auxi';
+    var nota = h('span',{style:'width:100%;font-size:0.72rem;color:var(--gris-medio);margin-top:2px;'}, 'Filtro automático '+origen+' — tocá un chip para cambiarlo manualmente.');
+    wrap.appendChild(nota);
+  }
   return wrap;
 }
 
@@ -411,6 +439,10 @@ function generarCredencialSimulada(nombreOS, numeroAfiliado) {
 }
 
 function esParaOtro() { return auxiState.data.para === 'otro'; }
+function esMenorActivo() {
+  var u = getUser();
+  return !!(u && u.tipo !== 'mascota' && u.edad !== undefined && u.edad !== '' && !isNaN(parseInt(u.edad)) && parseInt(u.edad) < 18);
+}
 
 function goBack() {
   if (auxiState.history.length === 0) {
@@ -475,8 +507,20 @@ function renderAuxi() {
     setAuxiExpr('happy');
     var userAnterior = getUser();
     var nombreAnterior = (userAnterior && userAnterior.nombre) || 'esa persona';
-    bubble.innerHTML = '<p>Sin problema. Puedo guardar el perfil de <strong>' + nombreAnterior + '</strong> para más tarde y armar uno nuevo para vos, o si preferís, lo elimino.</p>';
-    addBtn(btns,'Guardar el de ' + nombreAnterior + ' y crear uno nuevo','primary',()=>{
+    var otrosPerfiles = getProfiles().filter(function(p){
+      return p.id !== getActiveProfileId() && p.tipo !== 'mascota' && p.nombre;
+    });
+    bubble.innerHTML = otrosPerfiles.length
+      ? '<p>Sin problema. ¿Sos alguno de estos perfiles que ya tengo guardados?</p>'
+      : '<p>Sin problema. Puedo guardar el perfil de <strong>' + nombreAnterior + '</strong> para más tarde y armar uno nuevo para vos, o si preferís, lo elimino.</p>';
+    otrosPerfiles.forEach(function(p){
+      addBtn(btns, 'Sí, soy ' + p.nombre, 'primary', function(){
+        setActiveProfileId(p.id);
+        auxiState.history = [];
+        goToStep('welcome','happy');
+      });
+    });
+    addBtn(btns, otrosPerfiles.length ? 'No, soy alguien nuevo' : ('Guardar el de ' + nombreAnterior + ' y crear uno nuevo'), otrosPerfiles.length ? '' : 'primary', ()=>{
       crearPerfilNuevo('persona');
       auxiState.history=[];
       goToStep('welcome_new','happy');
@@ -866,17 +910,17 @@ function renderAuxi() {
   else if (step === 'consulta_provincia') {
     setAuxiExpr('caring');
     var p3cp = esParaOtro();
-    var yaUbicacion = getUser() && getUser().ubicacion;
+    var yaUbicacion = (getUser() && getUser().ubicacion) || getZonaSesion();
     // Ya la dijo en esta misma charla — confirmar en vez de repreguntar
     if (auxiState.data.provincia) {
       bubble.innerHTML = p3cp
         ? `<p>Me habías dicho que está en <strong>${auxiState.data.provincia}</strong>. ¿Seguimos con eso?</p>`
         : `<p>Me habías dicho que estás en <strong>${auxiState.data.provincia}</strong>. ¿Seguimos con eso?</p>`;
       addBtn(btns,'Sí, es correcto','primary',()=>goToStep('ofrecer_centros_cercanos','satisfied'));
-      addBtn(btns,'Cambiarla','',()=>{ auxiState.data.provincia=''; renderAuxi(); });
+      addBtn(btns,'Cambiarla','',()=>{ auxiState.data.provincia=''; setZonaSesion(''); renderAuxi(); });
       addBtn(btns,'← Volver','',()=>goBack());
     }
-    // Ya está en el perfil guardado — usarla sin volver a preguntar
+    // Ya está en el perfil guardado, o ya se lo dijo en una charla anterior — usarla sin volver a preguntar
     else if (yaUbicacion) {
       auxiState.data.provincia = yaUbicacion;
       goToStep('ofrecer_centros_cercanos','satisfied');
@@ -891,6 +935,7 @@ function renderAuxi() {
     provincias.forEach(function(p){
       addBtn(btns, p, '', function(){
         auxiState.data.provincia = p;
+        setZonaSesion(p);
         if (p !== 'CABA' && p !== 'GBA / Gran Buenos Aires') {
           // Mostrar aviso de cobertura nacional
           auxiState.data._aviso_cobertura = true;
@@ -946,8 +991,22 @@ function renderAuxi() {
   // Urgente: sí
   else if (step === 'urgente_si') {
     setAuxiExpr('alert');
+    var menorUrg = esMenorActivo() && !esParaOtro();
     // Pregunta de Auxi es lo protagonista
-    bubble.innerHTML = '<p>Estoy acá. Respirá.</p><p>¿Podés contarme un poco qué está pasando?</p>';
+    bubble.innerHTML = menorUrg
+      ? '<p>Estoy acá. Respirá.</p><p>¿Hay un adulto con vos en este momento? Te recomiendo avisarle mientras seguimos hablando.</p>'
+      : '<p>Estoy acá. Respirá.</p><p>¿Podés contarme un poco qué está pasando?</p>';
+    if (menorUrg) {
+      var u = getUser();
+      if (u && u.adulto_telefono) {
+        var avisarBtn = h('a',{
+          href: 'tel:'+u.adulto_telefono.replace(/[^0-9+]/g,''),
+          style: 'display:flex;align-items:center;gap:10px;background:rgba(255,255,255,0.14);border:2px solid rgba(255,255,255,0.35);color:white;border-radius:14px;padding:12px 16px;text-decoration:none;font-family:var(--font-body);width:100%;max-width:380px;'
+        });
+        avisarBtn.innerHTML = '<span style="font-size:1.3rem;">📞</span><span style="font-size:0.86rem;font-weight:600;">Llamar a '+(u.adulto_nombre||'tu adulto responsable')+(u.adulto_relacion?' ('+u.adulto_relacion+')':'')+'</span>';
+        btns.appendChild(avisarBtn);
+      }
+    }
     // Botón principal: contarle a Auxi
     addBtn(btns,'Sí, contarle a Auxi','primary',()=>goToStep('sint_zona','caring'));
     // Separador visual
@@ -986,7 +1045,12 @@ function renderAuxi() {
 
   else if (step === 'sint_zona') {
     setAuxiExpr('caring');
-    bubble.innerHTML = esParaOtro() ? `<p>¿Dónde siente el malestar?</p>` : `<p>¿Dónde sentís el malestar?</p>`;
+    var notaMenor = '';
+    if (esMenorActivo() && !esParaOtro() && !auxiState.data._notaMenorMostrada) {
+      auxiState.data._notaMenorMostrada = true;
+      notaMenor = '<p style="font-size:0.8rem;opacity:0.85;">Te recomiendo hacer esto junto a una persona adulta responsable, si podés.</p>';
+    }
+    bubble.innerHTML = (esParaOtro() ? `<p>¿Dónde siente el malestar?</p>` : `<p>¿Dónde sentís el malestar?</p>`) + notaMenor;
     ['Cabeza','Pecho','Abdomen','Extremidades','Todo el cuerpo','No sé'].forEach(z=>{
       addBtn(btns, z, auxiState.data.sint_zona===z?'primary':'', ()=>{
         auxiState.data.sint_zona = z; goToStep('sint_sensacion','caring');
@@ -1189,6 +1253,9 @@ function renderAuxi() {
         sensacion: auxiState.data.sint_sensacion || '',
         desde: auxiState.data.sint_cuando || '',
       };
+      if (!u.historial_animo) u.historial_animo = [];
+      u.historial_animo.unshift(u.ultima_consulta);
+      u.historial_animo = u.historial_animo.slice(0, 10); // conservar como máximo las últimas 10
       saveUser(u);
     }
     bubble.innerHTML = p3g
@@ -1246,21 +1313,96 @@ function renderAuxi() {
       bubble.innerHTML = p3pe
         ? `<p>Ya me habías dicho que tiene <strong>${auxiState.data.edad} años</strong>. ¿Seguimos con ese dato?</p>`
         : `<p>Ya me habías dicho que tenés <strong>${auxiState.data.edad} años</strong>. ¿Seguimos con ese dato?</p>`;
-      addBtn(btns,'Sí, es correcto','primary',()=>goToStep('perfil_ubicacion','caring'));
+      addBtn(btns,'Sí, es correcto','primary',()=>goToStep('perfil_edad_router','caring'));
       addBtn(btns,'Cambiarlo','',()=>{ auxiState.data.edad=''; renderAuxi(); });
     } else {
       bubble.innerHTML = p3pe
         ? `<p>¿Cuántos años tiene? <span style="color:#a8a29e;font-size:0.82rem;">(opcional)</span></p>`
         : `<p>¿Cuántos años tenés? <span style="color:#a8a29e;font-size:0.82rem;">(opcional)</span></p>`;
-      addFieldStep(btns,p3pe?'Su edad...':'Tu edad...','edad','perfil_ubicacion');
+      addFieldStep(btns,p3pe?'Su edad...':'Tu edad...','edad','perfil_edad_router');
       addBtn(btns,'← Volver','',()=>goBack());
     }
   }
+  // Bifurca según si la edad ingresada corresponde a un menor de edad
+  else if (step === 'perfil_edad_router') {
+    var edadNum = parseInt(auxiState.data.edad);
+    if (!isNaN(edadNum) && edadNum < 18) {
+      goToStep('perfil_menor_acompanante','caring');
+    } else {
+      goToStep('perfil_ubicacion','caring');
+    }
+    return;
+  }
+  // Modo de acompañamiento para menores — datos del adulto responsable (opcional)
+  else if (step === 'perfil_menor_acompanante') {
+    setAuxiExpr('caring');
+    bubble.innerHTML = '<p>Como sos menor de edad, puedo guardar el contacto de un adulto responsable, por si en algún momento hace falta.</p>'
+      + '<p style="font-size:0.78rem;color:#78716c;">Es completamente opcional — solo lo guardo si vos querés.</p>';
+    addBtn(btns,'Sí, quiero agregarlo','primary',()=>goToStep('perfil_menor_nombre_adulto','caring'));
+    addBtn(btns,'No, prefiero no darlo','',()=>goToStep('perfil_ubicacion','caring'));
+    addBtn(btns,'← Volver','',()=>goBack());
+  }
+  else if (step === 'perfil_menor_nombre_adulto') {
+    setAuxiExpr('caring');
+    bubble.innerHTML = '<p>¿Cómo se llama el adulto responsable?</p>';
+    addFieldStep(btns,'Nombre del adulto...','adulto_nombre','perfil_menor_relacion');
+    addBtn(btns,'← Volver','',()=>goBack());
+  }
+  else if (step === 'perfil_menor_relacion') {
+    setAuxiExpr('caring');
+    bubble.innerHTML = '<p>¿Qué relación tiene con vos?</p>';
+    ['Madre','Padre','Tutor/a','Otro'].forEach(function(r){
+      addBtn(btns, r, '', function(){ auxiState.data.adulto_relacion = r; goToStep('perfil_menor_telefono','caring'); });
+    });
+    addBtn(btns,'← Volver','',()=>goBack());
+  }
+  else if (step === 'perfil_menor_telefono') {
+    setAuxiExpr('caring');
+    bubble.innerHTML = '<p>¿Tenés su teléfono? <span style="color:#a8a29e;font-size:0.82rem;">(opcional)</span></p>';
+    addFieldStep(btns,'Teléfono...','adulto_telefono','perfil_menor_email');
+    addBtn(btns,'← Volver','',()=>goBack());
+  }
+  else if (step === 'perfil_menor_email') {
+    setAuxiExpr('caring');
+    bubble.innerHTML = '<p>¿Y su correo electrónico? <span style="color:#a8a29e;font-size:0.82rem;">(opcional)</span></p>';
+    addFieldStep(btns,'Correo...','adulto_email','perfil_ubicacion');
+    addBtn(btns,'← Volver','',()=>goBack());
+  }
   else if (step === 'perfil_ubicacion') {
     setAuxiExpr('caring');
-    bubble.innerHTML = `<p>¿En qué zona estás? <span style="color:#a8a29e;font-size:0.82rem;">(ej: CABA, GBA, Rosario…)</span></p>`;
-    addFieldStep(btns,'Tu ubicación...','ubicacion','perfil_alergias');
+    var zonaConocida = auxiState.data.ubicacion || auxiState.data.provincia || (getUser() && getUser().ubicacion) || getZonaSesion();
+    if (zonaConocida) {
+      auxiState.data.ubicacion = zonaConocida; // aseguramos que quede guardado con la clave correcta del perfil
+      bubble.innerHTML = `<p>Ya sé que estás en <strong>${zonaConocida}</strong>. ¿Seguimos así, o preferís agregar el barrio o localidad para recursos más precisos?</p>`;
+      addBtn(btns,'Seguimos así','primary',()=>goToStep('perfil_alergias','caring'));
+      addBtn(btns,'Agregar barrio/localidad','',()=>goToStep('perfil_barrio','caring'));
+      addBtn(btns,'Cambiar la zona','',()=>{ auxiState.data.ubicacion=''; auxiState.data.provincia=''; setZonaSesion(''); renderAuxi(); });
+      addBtn(btns,'← Volver','',()=>goBack());
+    } else {
+      bubble.innerHTML = `<p>¿En qué zona estás? <span style="color:#a8a29e;font-size:0.82rem;">(ej: CABA, GBA, Rosario…)</span></p>`;
+      addFieldStep(btns,'Tu ubicación...','ubicacion','perfil_ubicacion_guardar');
+      addBtn(btns,'← Volver','',()=>goBack());
+    }
+  }
+  else if (step === 'perfil_ubicacion_guardar') {
+    setZonaSesion(auxiState.data.ubicacion || '');
+    goToStep('perfil_alergias','caring');
+    return;
+  }
+  // Refinamiento opcional: barrio o localidad, solo si el usuario lo pide — nunca repite la pregunta de zona
+  else if (step === 'perfil_barrio') {
+    setAuxiExpr('caring');
+    bubble.innerHTML = `<p>¿En qué barrio o localidad, más específicamente? <span style="color:#a8a29e;font-size:0.82rem;">(opcional)</span></p>`;
+    addFieldStep(btns,'Ej: Palermo, San Isidro...','barrio_temp','perfil_barrio_confirmar');
     addBtn(btns,'← Volver','',()=>goBack());
+  }
+  else if (step === 'perfil_barrio_confirmar') {
+    if (auxiState.data.barrio_temp) {
+      auxiState.data.ubicacion = (auxiState.data.ubicacion||'') + (auxiState.data.ubicacion && auxiState.data.barrio_temp ? ', ' : '') + auxiState.data.barrio_temp;
+    }
+    setZonaSesion(auxiState.data.ubicacion || '');
+    goToStep('perfil_alergias','caring');
+    return;
   }
   else if (step === 'perfil_alergias') {
     setAuxiExpr('caring');
@@ -1299,7 +1441,9 @@ function renderAuxi() {
   else if (step === 'perfil_medicacion') {
     setAuxiExpr('caring');
     bubble.innerHTML = `<p>¿Tomás alguna medicación regularmente? <span style="color:#a8a29e;font-size:0.82rem;">(opcional)</span></p>`;
-    addFieldStep(btns,'Medicación...','medicacion','perfil_obra_social');
+    var edadNumMed = parseInt(auxiState.data.edad);
+    var esMenorPerfilNuevo = !isNaN(edadNumMed) && edadNumMed < 18;
+    addFieldStep(btns,'Medicación...','medicacion', esMenorPerfilNuevo ? 'perfil_dni' : 'perfil_obra_social');
     addBtn(btns,'← Volver','',()=>goBack());
   }
   else if (step === 'perfil_obra_social') {
@@ -1538,6 +1682,18 @@ function edadBanner(categoria) {
       'adultos':'La ansiedad y el estrés son muy frecuentes en la vida adulta, entre el trabajo, la crianza o la incertidumbre. Hay psicólogos gratuitos en los CeSAC de CABA sin necesidad de obra social.',
       'mayores':'El aislamiento social, la pérdida de seres queridos y los cambios físicos pueden impactar la salud mental a partir de esta edad. Los centros de día de CABA ofrecen actividades gratuitas y contención.',
     },
+    'esi': {
+      'ninez':'En la niñez, la ESI se trata sobre todo del cuidado del propio cuerpo, el respeto y la prevención del abuso — siempre acompañado por un adulto de confianza. Es un derecho garantizado por la Ley 26.150.',
+      'adolescencia':'En la adolescencia podés acceder a métodos anticonceptivos gratuitos y consultas confidenciales en los CAPS, sin necesidad de autorización de un adulto para la mayoría de las consultas.',
+      'adultos':'Los métodos anticonceptivos, la IVE y los controles de salud sexual son gratuitos en hospitales públicos y CAPS, sin importar tu edad ni tu obra social.',
+      'mayores':'El acceso a la salud sexual no tiene límite de edad. Los controles ginecológicos y urológicos de rutina siguen siendo importantes después de los 50.',
+    },
+    'donaciones': {
+      'ninez':'Todavía sos muy joven para donar sangre (se requieren 16 años), pero podés acompañar a un adulto a donar o guardar la idea para el futuro.',
+      'adolescencia':'A partir de los 16 años ya podés donar sangre (con autorización de un adulto responsable hasta los 18). Es un buen momento para empezar el hábito.',
+      'adultos':'Podés donar sangre hasta los 65 años, y a partir de los 18 sos donante de órganos automáticamente salvo que hayas expresado lo contrario ante el INCUCAI.',
+      'mayores':'Podés donar sangre hasta los 65 años. Pasada esa edad, todavía podés colaborar difundiendo la donación o consultando por donación de córneas y otros tejidos, que no tienen el mismo límite de edad.',
+    },
   };
   var lista = mensajes[categoria];
   if (!lista) return null;
@@ -1550,6 +1706,13 @@ function edadBanner(categoria) {
       msg += ' Sumá también mamografía cada 2 años desde los 40 y Papanicolau anual.';
     } else if (sexo === 'masculino' && rango === 'mayores') {
       msg += ' A partir de los 50 conviene consultar sobre control de próstata.';
+    }
+  }
+  if (categoria === 'esi' && (rango === 'adolescencia' || rango === 'adultos' || rango === 'mayores')) {
+    if (sexo === 'femenino') {
+      msg += ' El Papanicolau anual es gratuito en hospitales públicos y CAPS, y es clave para la prevención.';
+    } else if (sexo === 'masculino') {
+      msg += ' Los controles urológicos y los test de ITS también son gratuitos en hospitales públicos, para vos y para tu pareja.';
     }
   }
   var etiquetaEdad = (user && user.edad) ? (user.edad+' años') : edadRangoLabel(rango);
@@ -1604,6 +1767,16 @@ function cardEl(ic, icon, title, desc, link, edadTags) {
   if (destacar) { c.classList.add('card--destacada'); }
   c.innerHTML = `${destacar?'<div class="card-badge-edad">★ Recomendado para tu edad</div>':''}<div class="card-icon ${ic}">${icon}</div><h3>${title}</h3><p>${desc}</p>${link?`<a href="${link}" target="_blank" rel="noopener">Ver más →</a>`:''}`;
   return c;
+}
+// Reordena un arreglo de elementos ya construidos (cardEl, hospCard, etc.) poniendo primero
+// los que están destacados para la edad activa, sin alterar el orden relativo dentro de cada grupo.
+function ordenarDestacadasPrimero(elementos) {
+  var destacados = [], resto = [];
+  elementos.forEach(function(el){
+    if (el && el.classList && el.classList.contains('card--destacada')) destacados.push(el);
+    else resto.push(el);
+  });
+  return destacados.concat(resto);
 }
 function hospCard(name, esp, addr, tel) {
   const c = h('div',{class:'hosp-card'});
@@ -1686,12 +1859,12 @@ function viewSaludFisica() {
       ]),
       h('div',{class:'section-block',id:'sec-programas'},[
         sectionTitle('Programas gratuitos'),
-        h('div',{class:'grid-2'},[
+        h('div',{class:'grid-2'},ordenarDestacadasPrimero([
           cardEl('ic-verde','','Programa Remediar','Medicamentos gratuitos en CAPS para enfermedades crónicas.',null),
           cardEl('ic-azul','','PAMI','Cobertura integral gratuita para jubilados, pensionados y mayores de 70 sin obra social.','https://www.pami.org.ar',['mayores']),
           cardEl('ic-rojo','','SUMAR','Seguro público de salud gratuito para quienes no tienen obra social.','https://www.argentina.gob.ar/salud/sumar',['ninez','adolescencia','adultos']),
           cardEl('ic-naranja','','Maternidad e Infancia','Plan 1000 días · Controles gratuitos durante el embarazo y primeros años.',null,['ninez','adultos']),
-        ]),
+        ])),
       ]),
       voluntariosInline('salud física'),
     ]),
@@ -1731,10 +1904,10 @@ function viewSaludMental() {
       ]),
       h('div',{class:'section-block',id:'sec-salud-mental-edad'},[
         sectionTitle('Según tu etapa de vida'),
-        h('div',{class:'grid-2'},[
+        h('div',{class:'grid-2'},ordenarDestacadasPrimero([
           cardEl('ic-azul','','Hospital Tobar García','Especializado en niñez y adolescencia (hasta 18 años). Guardia y consultorios externos.','https://buenosaires.gob.ar/hospitaltobargarcia',['ninez','adolescencia']),
           cardEl('ic-verde','','Centros de Día (CABA)','Espacios gratuitos de contención, actividades y socialización para mayores de 60 años.','https://buenosaires.gob.ar/vicejefatura/bienestar-integral/puntos-de-bienestar/centros-de-dia',['mayores']),
-        ]),
+        ])),
       ]),
       h('div',{class:'section-block'},[
         sectionTitle('Herramientas de bienestar'),
@@ -1752,23 +1925,52 @@ function viewSaludMental() {
 
 /* ============ VIEW: ESI ============ */
 function viewESI() {
+  var esNinezESI = getEdadFiltro() === 'ninez';
   return h('div',{class:'view'},[
     catBanner('ESI','Educación Sexual Integral · Derechos y acceso gratuito',
       '#00b894, #007d5a, #00462f',
       `<svg viewBox="0 0 200 200" width="180" height="180" xmlns="http://www.w3.org/2000/svg"><circle cx="100" cy="100" r="65" fill="rgba(255,255,255,0.15)"/><path d="M100 45 C70 45 50 65 50 90 C50 130 100 160 100 160 C100 160 150 130 150 90 C150 65 130 45 100 45Z" fill="rgba(255,255,255,0.5)"/><circle cx="100" cy="96" r="18" fill="rgba(255,255,255,0.8)"/><circle cx="100" cy="96" r="9" fill="rgba(0,123,90,0.6)"/></svg>`
     ),
-    h('div',{class:'main-content'},[
+    esNinezESI ? h('div',{class:'main-content'},[
+      edadFiltroChips(),
+      (function(){var eb=edadBanner('esi');return eb;})(),
+      h('div',{class:'aviso aviso-info'},[h('span',{},'ℹ️'),h('div',{},'En la niñez, la Educación Sexual Integral (Ley 26.150) se enfoca en el cuidado del propio cuerpo, el respeto y la prevención del abuso — siempre acompañado por un adulto de confianza.')]),
+      h('div',{class:'section-block'},[
+        sectionTitle('Cuidado del cuerpo y respeto'),
+        h('div',{class:'grid-2'},[
+          cardEl('ic-verde','','Mi cuerpo es mío','Tenés derecho a decidir quién te toca y cómo. Está bien decir que no, incluso a un familiar.',null),
+          cardEl('ic-azul','','Buen trato y mal trato','Aprender a reconocer situaciones que no están bien y que siempre se le pueden contar a un adulto de confianza.',null),
+        ]),
+      ]),
+      h('div',{class:'section-block'},[
+        sectionTitle('A quién pedir ayuda'),
+        h('div',{class:'grid-2'},[
+          cardEl('ic-rojo','','Línea 102','Niñez y adolescencia · gratuita · las 24 horas.',null),
+          cardEl('ic-naranja','','Línea 137','Ante situaciones de abuso o violencia · gratuita.',null),
+        ]),
+      ]),
+      h('div',{class:'section-block'},[
+        sectionTitle('Identidad y derechos'),
+        h('div',{class:'grid-2'},[
+          cardEl('ic-verde','','Identidad de género','Ley 26.743: cambio registral gratuito y sin requisitos médicos.',null),
+          cardEl('ic-azul','','INADI','Atención ante discriminación.','https://www.argentina.gob.ar/inadi'),
+        ]),
+      ]),
+      voluntariosInline('ESI y derechos'),
+    ]) : h('div',{class:'main-content'},[
+      edadFiltroChips(),
+      (function(){var eb=edadBanner('esi');return eb;})(),
       h('div',{class:'aviso aviso-info'},[h('span',{},'ℹ️'),h('div',{},'La ESI (Ley 26.150) y el Programa de Salud Sexual (Ley 25.673) garantizan acceso gratuito a métodos anticonceptivos, información y atención en todo el país.')]),
       h('div',{class:'section-block'},[
         sectionTitle('Métodos anticonceptivos gratuitos','Disponibles en hospitales y CAPS sin receta obligatoria'),
-        h('div',{class:'grid-2'},[
-          cardEl('ic-verde','','Pastillas anticonceptivas','Gratuitas en hospitales públicos y CAPS. Pedí en farmacia hospitalaria.',null),
-          cardEl('ic-verde','','Preservativos','Gratuitos en hospitales, CAPS y algunos centros comunitarios.',null),
-          cardEl('ic-azul','','DIU (espiral)','Colocación gratuita en hospitales públicos con turno médico.',null),
-          cardEl('ic-azul','','Implante subdérmico','Disponible gratuitamente con turno en hospitales públicos.',null),
-          cardEl('ic-naranja','','Inyectable anticonceptivo','En CAPS y hospitales públicos. Consultá por disponibilidad.',null),
-          cardEl('ic-rojo','','Anticoncepción de emergencia','Pastilla del día después: gratuita en CAPS y farmacias del plan Remediar.',null),
-        ]),
+        h('div',{class:'grid-2'},ordenarDestacadasPrimero([
+          cardEl('ic-verde','','Pastillas anticonceptivas','Gratuitas en hospitales públicos y CAPS. Pedí en farmacia hospitalaria.',null,['adolescencia','adultos','mayores']),
+          cardEl('ic-verde','','Preservativos','Gratuitos en hospitales, CAPS y algunos centros comunitarios.',null,['adolescencia','adultos','mayores']),
+          cardEl('ic-azul','','DIU (espiral)','Colocación gratuita en hospitales públicos con turno médico.',null,['adultos','mayores']),
+          cardEl('ic-azul','','Implante subdérmico','Disponible gratuitamente con turno en hospitales públicos.',null,['adolescencia','adultos']),
+          cardEl('ic-naranja','','Inyectable anticonceptivo','En CAPS y hospitales públicos. Consultá por disponibilidad.',null,['adultos','mayores']),
+          cardEl('ic-rojo','','Anticoncepción de emergencia','Pastilla del día después: gratuita en CAPS y farmacias del plan Remediar.',null,['adolescencia','adultos']),
+        ])),
       ]),
       h('div',{class:'section-block'},[
         sectionTitle('Interrupción Voluntaria del Embarazo (IVE)','Ley 27.610 · Gratuita hasta la semana 14'),
@@ -2150,6 +2352,8 @@ function viewDonaciones() {
       `<svg viewBox="0 0 200 200" width="180" height="180" xmlns="http://www.w3.org/2000/svg"><path d="M100 160 C60 130 30 110 30 75 C30 52 50 40 70 40 C83 40 94 47 100 56 C106 47 117 40 130 40 C150 40 170 52 170 75 C170 110 140 130 100 160Z" fill="rgba(255,255,255,0.55)"/><path d="M100 30 C100 30 84 52 84 64 C84 73 91 80 100 80 C109 80 116 73 116 64 C116 52 100 30 100 30Z" fill="rgba(255,80,80,0.7)"/></svg>`
     ),
     h('div',{class:'main-content'},[
+      edadFiltroChips(),
+      (function(){var eb=edadBanner('donaciones');return eb;})(),
       h('div',{class:'section-block'},[
         sectionTitle('Donación de sangre','Salvás hasta 4 vidas con una sola donación'),
         h('div',{class:'aviso aviso-info'},[h('span',{},'ℹ️'),h('div',{},'Podés donar si tenés entre 16 y 65 años, más de 50 kg y te sentís bien. No necesitás estar en ayunas.')]),
@@ -2381,15 +2585,34 @@ function perfilSwitcher() {
   var profiles = getProfiles();
   var activeId = getActiveProfileId();
   var wrap = h('div',{class:'perfil-switcher'});
-  profiles.forEach(function(p){
-    var esActivo = p.id === activeId;
-    var label = (p.tipo === 'mascota' ? '🐾 ' : '👤 ') + (p.nombre || (p.tipo==='mascota'?'Mascota sin nombre':'Sin nombre'));
-    var tab = h('button',{class:'perfil-tab'+(esActivo?' perfil-tab--active':'')}, label);
-    tab.addEventListener('click', function(){
-      if (!esActivo) { setActiveProfileId(p.id); renderRoute(); }
+
+  function esMenorPerfil(p) {
+    return p.tipo !== 'mascota' && p.edad !== undefined && p.edad !== '' && !isNaN(parseInt(p.edad)) && parseInt(p.edad) < 18;
+  }
+  // Agrupar solo para el orden visual — no cambia nada de cómo se guardan o eligen los perfiles
+  var grupos = [
+    {label:'👤 Adultos', items: profiles.filter(function(p){ return p.tipo !== 'mascota' && !esMenorPerfil(p); })},
+    {label:'🧒 Menores', items: profiles.filter(function(p){ return esMenorPerfil(p); })},
+    {label:'🐾 Animales', items: profiles.filter(function(p){ return p.tipo === 'mascota'; })},
+  ];
+  var gruposConDatos = grupos.filter(function(g){ return g.items.length > 0; });
+
+  gruposConDatos.forEach(function(grupo, i){
+    if (gruposConDatos.length > 1) {
+      wrap.appendChild(h('span',{style:'width:100%;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--gris-medio);margin-top:'+(i>0?'6px':'0')+';'}, grupo.label));
+    }
+    grupo.items.forEach(function(p){
+      var esActivo = p.id === activeId;
+      var icono = p.tipo === 'mascota' ? '🐾 ' : (esMenorPerfil(p) ? '🧒 ' : '👤 ');
+      var label = icono + (p.nombre || (p.tipo==='mascota'?'Mascota sin nombre':'Sin nombre'));
+      var tab = h('button',{class:'perfil-tab'+(esActivo?' perfil-tab--active':'')}, label);
+      tab.addEventListener('click', function(){
+        if (!esActivo) { setActiveProfileId(p.id); renderRoute(); }
+      });
+      wrap.appendChild(tab);
     });
-    wrap.appendChild(tab);
   });
+
   var addBtnEl = h('button',{class:'perfil-tab perfil-tab--add'},'+ Agregar perfil');
   addBtnEl.addEventListener('click', function(){
     auxiState = { step:'elegir_tipo_perfil', data:{}, expr:'happy', history:[] };
@@ -2548,16 +2771,44 @@ function viewMiSalud() {
   salHeader.appendChild(headerInfo);
   mc.appendChild(salHeader);
 
+  // ---- Recursos para familias (solo si el perfil activo es de un/a menor) ----
+  if (esMenorActivo()) {
+    function linkInternoFamilia(label, ruta, desc) {
+      var a = h('a',{class:'mapa-link', href:'#'+ruta, onclick:function(e){ e.preventDefault(); navigate(ruta); }});
+      a.innerHTML = '<span class="mapa-link-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span><div><div class="mapa-link-title">'+label+'</div><div class="mapa-link-desc">'+desc+'</div></div><span class="mapa-link-arrow">Ver →</span>';
+      return a;
+    }
+    mc.appendChild(h('div',{style:'background:var(--primario-claro);border:1px solid var(--primario);border-radius:10px;padding:1rem 1.1rem;margin-bottom:1.5rem;'},[
+      (function(){var t=h('div',{style:'font-size:0.85rem;font-weight:700;color:var(--primario);margin-bottom:8px;'},'👨‍👩‍👧 Recursos para familias'); return t;})(),
+      linkInternoFamilia('Primeros auxilios pediátricos','/categorias/primeros-auxilios','Guías paso a paso para emergencias con niños y adolescentes'),
+      linkInternoFamilia('Cómo acompañar una crisis emocional','/categorias/salud-mental','Apoyo psicológico gratuito y orientación para adultos responsables'),
+      calLink('Calendario de vacunación','https://www.argentina.gob.ar/salud/vacunas','Ministerio de Salud · Gratuito · Todas las edades'),
+      linkInternoFamilia('Derechos de niños y adolescentes (ESI)','/categorias/esi','Educación sexual integral y derechos garantizados por ley'),
+      (function(){var d=h('div',{style:'font-size:0.78rem;color:var(--color-text);margin-top:6px;'},'Línea 102 (Niñez y adolescencia) · gratuita · las 24 horas'); return d;})(),
+    ]));
+  }
+
   // ---- Datos personales ----
   mc.appendChild(sectionTitle('Mis datos'));
+  var esMenorVista = esMenorActivo();
   var campos = [
     {label:'Nombre',key:'nombre'},
     {label:'Edad',key:'edad'},
     {label:'Ubicación',key:'ubicacion'},
-    {label:'Obra social',key:'obra_social'},
-    {label:'DNI / Pasaporte',key:'dni'},
-    {label:'Contacto de emergencia',key:'contacto_emergencia'},
   ];
+  if (!esMenorVista) campos.push({label:'Obra social',key:'obra_social'});
+  campos.push(
+    {label:'DNI / Pasaporte',key:'dni'},
+    {label:'Contacto de emergencia',key:'contacto_emergencia'}
+  );
+  if (esMenorVista) {
+    campos.push(
+      {label:'Adulto responsable',key:'adulto_nombre'},
+      {label:'Relación con el adulto',key:'adulto_relacion'},
+      {label:'Teléfono del adulto',key:'adulto_telefono'},
+      {label:'Correo del adulto',key:'adulto_email'}
+    );
+  }
   campos.forEach(function(campo) {
     var card = h('div',{class:'salud-card'});
     var val = user[campo.key]||'';
@@ -2593,7 +2844,8 @@ function viewMiSalud() {
     mc.appendChild(card);
   });
 
-  // ---- Mi obra social (simulación frontend) ----
+  // ---- Mi obra social (simulación frontend) — no aplica a menores, que suelen tener la de un adulto ----
+  if (!esMenorVista) {
   mc.appendChild(h('div',{class:'section-divider',style:'margin:1.5rem 0 1rem;'}));
   mc.appendChild(sectionTitle('Mi obra social','Simulación — AuxiliAR no accede a datos reales de tu afiliación'));
   if (user.obra_social_conectada) {
@@ -2647,6 +2899,7 @@ function viewMiSalud() {
     }},'Conectar mi obra social (simulado)');
     mc.appendChild(conectarBtn);
   }
+  }
 
   // ---- Cómo te sentiste (guardado por Auxi) ----
   if (user.ultima_consulta && (user.ultima_consulta.sensacion || user.ultima_consulta.desde)) {
@@ -2668,6 +2921,35 @@ function viewMiSalud() {
       navigate('/');
     }},'Contarle a Auxi cómo te sentís ahora');
     mc.appendChild(hablarBtn);
+
+    // Historial completo — solo visible para el propio perfil del/de la menor, como seguimiento
+    if (esMenorActivo() && user.historial_animo && user.historial_animo.length > 1) {
+      var histWrap = h('div',{style:'margin-top:1rem;'});
+      histWrap.appendChild(h('div',{style:'font-size:0.78rem;font-weight:700;color:var(--gris-medio);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px;'},'Historial reciente'));
+      user.historial_animo.slice(1,6).forEach(function(h_prev){
+        var fila = h('div',{style:'display:flex;justify-content:space-between;gap:8px;font-size:0.8rem;color:var(--color-text-muted);padding:5px 0;border-bottom:1px solid var(--borde);'});
+        fila.innerHTML = '<span>'+(h_prev.fecha||'')+'</span><span style="text-align:right;">'+(h_prev.sensacion||'')+'</span>';
+        histWrap.appendChild(fila);
+      });
+      mc.appendChild(histWrap);
+    }
+  }
+
+  // ---- Enviar resumen al adulto responsable (solo perfiles de menores con contacto guardado) ----
+  if (esMenorActivo() && user.adulto_email) {
+    var resumenPartes = [
+      'Resumen de '+(user.nombre||'')+' generado desde AuxiliAR:',
+      user.edad ? ('Edad: '+user.edad) : '',
+      user.alergias ? ('Alergias: '+user.alergias) : '',
+      user.enfermedades ? ('Condiciones: '+user.enfermedades) : '',
+      user.medicacion ? ('Medicación: '+user.medicacion) : '',
+      (user.ultima_consulta && user.ultima_consulta.sensacion) ? ('Último chequeo de ánimo ('+user.ultima_consulta.fecha+'): '+user.ultima_consulta.sensacion) : '',
+    ].filter(Boolean).join('\n');
+    var mailtoUrl = 'mailto:'+encodeURIComponent(user.adulto_email)
+      +'?subject='+encodeURIComponent('Resumen de salud de '+(user.nombre||''))
+      +'&body='+encodeURIComponent(resumenPartes);
+    var enviarBtn = h('a',{href:mailtoUrl, class:'btn btn--outline', style:'margin-top:0.5rem;display:inline-flex;'},'✉️ Enviar resumen a '+(user.adulto_nombre||'el adulto responsable'));
+    mc.appendChild(enviarBtn);
   }
 
   // ---- Información médica ----
@@ -3082,6 +3364,35 @@ function toggleA11yPanel() {
   panel.classList.toggle('open', !isOpen);
   tab.setAttribute('aria-expanded', String(!isOpen));
 }
+
+/* Gestos táctiles: swipe para abrir/cerrar el panel de accesibilidad en mobile */
+(function(){
+  function trackSwipe(el, onSwipeLeft, onSwipeRight) {
+    var startX = null, startY = null;
+    el.addEventListener('touchstart', function(e){
+      startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+    }, {passive:true});
+    el.addEventListener('touchend', function(e){
+      if (startX === null) return;
+      var endX = e.changedTouches[0].clientX;
+      var endY = e.changedTouches[0].clientY;
+      var dx = endX - startX, dy = endY - startY;
+      // Solo contar como swipe horizontal si el movimiento horizontal domina claramente
+      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        if (dx < 0 && onSwipeLeft) onSwipeLeft();
+        if (dx > 0 && onSwipeRight) onSwipeRight();
+      }
+      startX = null; startY = null;
+    }, {passive:true});
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    var tab = document.getElementById('a11yTab');
+    var panel = document.getElementById('a11yPanel');
+    if (tab) trackSwipe(tab, function(){ if(!panel.classList.contains('open')) toggleA11yPanel(); }, null);
+    if (panel) trackSwipe(panel, null, function(){ if(panel.classList.contains('open')) toggleA11yPanel(); });
+  });
+})();
+
 function syncA11yPanel() {
   // Theme buttons
   const lBtn=document.getElementById('a11y-light');
@@ -3157,7 +3468,25 @@ document.getElementById('hamburger')?.addEventListener('click',function(){
   const nl=document.getElementById('navLinks');
   const open=nl.classList.toggle('open');
   this.setAttribute('aria-expanded',open);
+  if (!open) {
+    // Al cerrar el menú, también colapsamos el desplegable de Categorías
+    // para que la próxima vez que se abra el menú arranque siempre cerrado.
+    document.querySelectorAll('.has-dropdown').forEach(function(li){ li.classList.remove('dropdown-open'); });
+  }
 });
+
+const MOBILE_BREAKPOINT = 680;
+function handleCategoriasClick(event, linkEl) {
+  event.preventDefault();
+  if (window.innerWidth <= MOBILE_BREAKPOINT) {
+    // En mobile: el link funciona como acordeón (abre/cierra el submenú)
+    const li = linkEl.closest('.has-dropdown');
+    li.classList.toggle('dropdown-open');
+  } else {
+    // En escritorio: comportamiento original, navega a la categoría
+    navigate('/categorias');
+  }
+}
 
 /* ============ HEADER SEARCH ============ */
 (function(){
