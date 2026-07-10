@@ -587,18 +587,66 @@ function renderAuxi() {
 
   // Menor solo/a — recursos específicos
   else if (step === 'menor_solo') {
+    setAuxiExpr('caring');
+    bubble.innerHTML = '<p>Estoy acá con vos. No estás solo/a en esto — hay personas preparadas para ayudarte ahora mismo, gratis y sin que tengas que dar tu nombre si no querés.</p>'
+      + '<p>¿Qué es lo que más se parece a lo que te está pasando?</p>';
+    addBtn(btns,'Me pasó algo grave ahora (accidente, herida, no puedo respirar bien)','danger',()=>goToStep('menor_solo_emergencia','alert'));
+    addBtn(btns,'Alguien me lastimó, me tocó o me hizo sentir mal','',()=>goToStep('menor_solo_abuso','caring'));
+    addBtn(btns,'Me siento muy mal, angustiado/a o no sé qué hacer','',()=>goToStep('menor_solo_emocional','caring'));
+    addBtn(btns,'Necesito hablar con alguien / no sé bien qué me pasa','',()=>goToStep('menor_solo_hablar','caring'));
+    addBtn(btns,'← Volver','',()=>goBack());
+  }
+
+  // Menor solo/a — emergencia física inmediata
+  else if (step === 'menor_solo_emergencia') {
     setAuxiExpr('alert');
-    bubble.innerHTML = '<p>Estoy acá para ayudarte. Estos recursos son especialmente para vos:</p>';
-    var menorWrap = h('div',{style:'width:100%;max-width:380px;display:flex;flex-direction:column;gap:8px;'});
-    [['102','Línea de niñez y adolescencia','tel:102'],
-     ['135','Crisis emocional · 24 hs','tel:135'],
-     ['144','Violencia de género','tel:144'],
-    ].forEach(function(info){
-      var btn = h('a',{href:info[2],style:'display:flex;align-items:center;gap:14px;background:rgba(255,255,255,0.14);border:2px solid rgba(255,255,255,0.35);color:white;border-radius:14px;padding:12px 16px;text-decoration:none;font-family:var(--font-body);'});
-      btn.innerHTML = '<span style="font-size:1.6rem;font-weight:900;min-width:48px;">'+info[0]+'</span><span style="font-size:0.85rem;font-weight:600;">'+info[1]+'</span><span style="margin-left:auto;">📞</span>';
-      menorWrap.appendChild(btn);
-    });
-    btns.appendChild(menorWrap);
+    bubble.innerHTML = '<p>Si es algo grave y está pasando ahora, llamá ya al 911 o al 107 — no hace falta esperar a nadie.</p>'
+      + '<p style="font-size:0.83rem;opacity:0.9;">Si podés, contale a un adulto cerca (un vecino, alguien en la calle) o quedate en un lugar seguro mientras llega ayuda.</p>';
+    var em1 = h('a',{href:'tel:911',style:'display:flex;align-items:center;gap:14px;background:rgba(255,255,255,0.14);border:2px solid rgba(255,255,255,0.35);color:white;border-radius:14px;padding:12px 16px;text-decoration:none;font-family:var(--font-body);width:100%;max-width:380px;margin-bottom:6px;'});
+    em1.innerHTML = '<span style="font-size:1.6rem;font-weight:900;min-width:48px;">911</span><span style="font-size:0.85rem;font-weight:600;">Policía / Emergencias</span><span style="margin-left:auto;">📞</span>';
+    var em2 = h('a',{href:'tel:107',style:'display:flex;align-items:center;gap:14px;background:rgba(255,255,255,0.14);border:2px solid rgba(255,255,255,0.35);color:white;border-radius:14px;padding:12px 16px;text-decoration:none;font-family:var(--font-body);width:100%;max-width:380px;'});
+    em2.innerHTML = '<span style="font-size:1.6rem;font-weight:900;min-width:48px;">107</span><span style="font-size:0.85rem;font-weight:600;">SAME (emergencia médica)</span><span style="margin-left:auto;">📞</span>';
+    btns.appendChild(em1); btns.appendChild(em2);
+    addBtn(btns,'Ya llamé, seguí acompañándome','',()=>goToStep('menor_solo_hablar','caring'));
+    addBtn(btns,'← Volver','',()=>goBack());
+  }
+
+  // Menor solo/a — abuso, violencia o maltrato
+  else if (step === 'menor_solo_abuso') {
+    setAuxiExpr('caring');
+    bubble.innerHTML = '<p>Lo que me contás es importante, y hiciste bien en decirlo. Nada de esto es tu culpa.</p>'
+      + '<p style="font-size:0.83rem;opacity:0.9;">Podés llamar y contar lo que quieras, con tus propias palabras, cuando estés listo/a. Es gratis, confidencial, y te van a creer.</p>';
+    var ab1 = h('a',{href:'tel:137',style:'display:flex;align-items:center;gap:14px;background:rgba(255,255,255,0.14);border:2px solid rgba(255,255,255,0.35);color:white;border-radius:14px;padding:12px 16px;text-decoration:none;font-family:var(--font-body);width:100%;max-width:380px;margin-bottom:6px;'});
+    ab1.innerHTML = '<span style="font-size:1.6rem;font-weight:900;min-width:48px;">137</span><span style="font-size:0.85rem;font-weight:600;">Víctimas de violencia y abuso sexual</span><span style="margin-left:auto;">📞</span>';
+    var ab2 = h('a',{href:'tel:102',style:'display:flex;align-items:center;gap:14px;background:rgba(255,255,255,0.14);border:2px solid rgba(255,255,255,0.35);color:white;border-radius:14px;padding:12px 16px;text-decoration:none;font-family:var(--font-body);width:100%;max-width:380px;'});
+    ab2.innerHTML = '<span style="font-size:1.6rem;font-weight:900;min-width:48px;">102</span><span style="font-size:0.85rem;font-weight:600;">Niñez y adolescencia · 24 hs</span><span style="margin-left:auto;">📞</span>';
+    btns.appendChild(ab1); btns.appendChild(ab2);
+    addBtn(btns,'Quiero seguir contándote a vos primero','',()=>goToStep('menor_solo_hablar','caring'));
+    addBtn(btns,'← Volver','',()=>goBack());
+  }
+
+  // Menor solo/a — angustia, crisis emocional
+  else if (step === 'menor_solo_emocional') {
+    setAuxiExpr('caring');
+    bubble.innerHTML = '<p>Gracias por contarme cómo te sentís. Lo que sentís es válido, y no tenés que atravesarlo solo/a.</p>'
+      + '<p style="font-size:0.83rem;opacity:0.9;">La línea 135 es gratuita, confidencial, y está para escucharte ahora, sin juzgar.</p>';
+    var em3 = h('a',{href:'tel:135',style:'display:flex;align-items:center;gap:14px;background:rgba(255,255,255,0.14);border:2px solid rgba(255,255,255,0.35);color:white;border-radius:14px;padding:12px 16px;text-decoration:none;font-family:var(--font-body);width:100%;max-width:380px;'});
+    em3.innerHTML = '<span style="font-size:1.6rem;font-weight:900;min-width:48px;">135</span><span style="font-size:0.85rem;font-weight:600;">Crisis emocional · 24 hs</span><span style="margin-left:auto;">📞</span>';
+    btns.appendChild(em3);
+    addBtn(btns,'Quiero contarte más a vos','primary',()=>goToStep('sint_sensacion_mental','caring'));
+    addBtn(btns,'← Volver','',()=>goBack());
+  }
+
+  // Menor solo/a — quiere hablar / no sabe bien qué le pasa
+  else if (step === 'menor_solo_hablar') {
+    setAuxiExpr('caring');
+    bubble.innerHTML = '<p>Está bien no saber exactamente qué te pasa. Contame con tus palabras, o si preferís, llamá directamente a alguna de estas líneas.</p>';
+    var h1 = h('a',{href:'tel:102',style:'display:flex;align-items:center;gap:14px;background:rgba(255,255,255,0.14);border:2px solid rgba(255,255,255,0.35);color:white;border-radius:14px;padding:12px 16px;text-decoration:none;font-family:var(--font-body);width:100%;max-width:380px;margin-bottom:6px;'});
+    h1.innerHTML = '<span style="font-size:1.6rem;font-weight:900;min-width:48px;">102</span><span style="font-size:0.85rem;font-weight:600;">Niñez y adolescencia · 24 hs</span><span style="margin-left:auto;">📞</span>';
+    var h2 = h('a',{href:'tel:135',style:'display:flex;align-items:center;gap:14px;background:rgba(255,255,255,0.14);border:2px solid rgba(255,255,255,0.35);color:white;border-radius:14px;padding:12px 16px;text-decoration:none;font-family:var(--font-body);width:100%;max-width:380px;'});
+    h2.innerHTML = '<span style="font-size:1.6rem;font-weight:900;min-width:48px;">135</span><span style="font-size:0.85rem;font-weight:600;">Crisis emocional · 24 hs</span><span style="margin-left:auto;">📞</span>';
+    btns.appendChild(h1); btns.appendChild(h2);
+    addBtn(btns,'Contarte a vos con mis palabras','primary',()=>goToStep('sint_sensacion_mental','caring'));
     addBtn(btns,'Ver recursos para jóvenes','',()=>navigate('/categorias/salud-mental'));
     addBtn(btns,'← Volver','',()=>goBack());
   }
@@ -1245,9 +1293,10 @@ function renderAuxi() {
   else if (step === 'guardar_sint_mental') {
     setAuxiExpr('satisfied');
     var p3g = esParaOtro();
-    if (!p3g) {
-      var u = getUser() || {};
-      // Guardar cómo se siente como nota en el perfil (solo si es sobre uno mismo)
+    var yaTienePerfil = !p3g && !!(getUser() && getUser().nombre);
+    if (yaTienePerfil) {
+      var u = getUser();
+      // Guardar cómo se siente como nota en el perfil (solo si es sobre uno mismo y ya existe perfil)
       u.ultima_consulta = {
         fecha: new Date().toLocaleDateString('es-AR'),
         sensacion: auxiState.data.sint_sensacion || '',
@@ -1258,12 +1307,20 @@ function renderAuxi() {
       u.historial_animo = u.historial_animo.slice(0, 10); // conservar como máximo las últimas 10
       saveUser(u);
     }
-    bubble.innerHTML = p3g
-      ? '<p>Tomé nota de lo que me contaste sobre esta persona.</p><p style="font-size:0.83rem;color:inherit;opacity:0.85;">Te llevo a los recursos de salud mental. Recordá que la línea 135 está disponible ahora si lo necesita.</p>'
-      : '<p>Guardé cómo te sentís. Podés verlo en <strong>Mi Salud</strong>.</p>'
-      + '<p style="font-size:0.83rem;color:inherit;opacity:0.85;">Te llevo a los recursos de salud mental. Recordá que la línea 135 está disponible ahora si lo necesitás.</p>';
-    addBtn(btns,'Ver recursos de salud mental','primary',()=>navigate('/categorias/salud-mental'));
-    if (!p3g) addBtn(btns,'Ir a Mi Salud','',()=>navigate('/mi-salud'));
+    if (p3g) {
+      bubble.innerHTML = '<p>Tomé nota de lo que me contaste sobre esta persona.</p><p style="font-size:0.83rem;color:inherit;opacity:0.85;">Te llevo a los recursos de salud mental. Recordá que la línea 135 está disponible ahora si lo necesita.</p>';
+      addBtn(btns,'Ver recursos de salud mental','primary',()=>navigate('/categorias/salud-mental'));
+    } else if (yaTienePerfil) {
+      bubble.innerHTML = '<p>Guardé cómo te sentís. Podés verlo en <strong>Mi Salud</strong>.</p>'
+        + '<p style="font-size:0.83rem;color:inherit;opacity:0.85;">Te llevo a los recursos de salud mental. Recordá que la línea 135 está disponible ahora si lo necesitás.</p>';
+      addBtn(btns,'Ver recursos de salud mental','primary',()=>navigate('/categorias/salud-mental'));
+      addBtn(btns,'Ir a Mi Salud','',()=>navigate('/mi-salud'));
+    } else {
+      // Todavía no hay perfil — no guardamos nada a ciegas, ofrecemos crear el perfil de verdad
+      bubble.innerHTML = '<p>Todavía no tenés un perfil creado, así que no puedo guardar esto en <strong>Mi Salud</strong> — pero si querés, lo creamos ahora mismo y lo guardo ahí.</p>';
+      addBtn(btns,'Sí, crear mi perfil ahora','primary',()=>goToStep('perfil_nombre','caring'));
+      addBtn(btns,'Ver recursos de salud mental','',()=>navigate('/categorias/salud-mental'));
+    }
     addBtn(btns,'← Volver','',()=>goBack());
   }
 
@@ -1418,9 +1475,20 @@ function renderAuxi() {
     if (auxiState.data.edad !== undefined) usr.edad = auxiState.data.edad;
     if (auxiState.data.sexo !== undefined) usr.sexo = auxiState.data.sexo;
     if (auxiState.data.alergias !== undefined) usr.alergias = auxiState.data.alergias;
+    // Si veníamos de contarle a Auxi cómo nos sentíamos antes de tener perfil, guardarlo ahora
+    if (auxiState.data.sint_sensacion) {
+      usr.ultima_consulta = {
+        fecha: new Date().toLocaleDateString('es-AR'),
+        sensacion: auxiState.data.sint_sensacion,
+        desde: auxiState.data.sint_cuando || '',
+      };
+      if (!usr.historial_animo) usr.historial_animo = [];
+      usr.historial_animo.unshift(usr.ultima_consulta);
+      usr.historial_animo = usr.historial_animo.slice(0, 10);
+    }
     saveUser(Object.assign(usr, auxiState.data));
     var nombre = usr.nombre || '';
-    bubble.innerHTML = '<p>¡Listo' + (nombre ? ', <strong>' + nombre + '</strong>' : '') + '! Guardé lo esencial.</p>'
+    bubble.innerHTML = '<p>¡Listo' + (nombre ? ', <strong>' + nombre + '</strong>' : '') + '! Guardé lo esencial'+(auxiState.data.sint_sensacion?', incluyendo cómo te sentías':'')+'.</p>'
       + '<p style="font-size:0.83rem;color:inherit;opacity:0.85;margin-top:0.3rem;">Podés completar más datos médicos en <strong>Mi Salud</strong> cuando quieras.</p>';
     if ((auxiState.data.destino || '/categorias') !== '/mi-salud') {
       addBtn(btns, 'Ver recursos', 'primary', function() {
@@ -1501,7 +1569,18 @@ function renderAuxi() {
   }
   else if (step === 'perfil_listo') {
     setAuxiExpr('satisfied');
-    saveUser(auxiState.data);
+    var usrFinal = getUser() || {};
+    if (auxiState.data.sint_sensacion) {
+      usrFinal.ultima_consulta = {
+        fecha: new Date().toLocaleDateString('es-AR'),
+        sensacion: auxiState.data.sint_sensacion,
+        desde: auxiState.data.sint_cuando || '',
+      };
+      if (!usrFinal.historial_animo) usrFinal.historial_animo = [];
+      usrFinal.historial_animo.unshift(usrFinal.ultima_consulta);
+      usrFinal.historial_animo = usrFinal.historial_animo.slice(0, 10);
+    }
+    saveUser(Object.assign(usrFinal, auxiState.data));
     bubble.innerHTML = `<p>¡Listo, <strong>${auxiState.data.nombre||'!'}</strong> Guardé tu información.</p><p>La próxima vez que me consultes voy a recordar tus datos para ayudarte mejor.</p>`;
     var destinoFinal = auxiState.data.destino || '/categorias';
     if (destinoFinal === '/mi-salud') {
@@ -1862,7 +1941,7 @@ function viewSaludFisica() {
         h('div',{class:'grid-2'},ordenarDestacadasPrimero([
           cardEl('ic-verde','','Programa Remediar','Medicamentos gratuitos en CAPS para enfermedades crónicas.',null),
           cardEl('ic-azul','','PAMI','Cobertura integral gratuita para jubilados, pensionados y mayores de 70 sin obra social.','https://www.pami.org.ar',['mayores']),
-          cardEl('ic-rojo','','SUMAR','Seguro público de salud gratuito para quienes no tienen obra social.','https://www.argentina.gob.ar/salud/sumar',['ninez','adolescencia','adultos']),
+          cardEl('ic-rojo','','SUMAR','Seguro público de salud gratuito para quienes no tienen obra social.','https://www.argentina.gob.ar/salud/sumarmas',['ninez','adolescencia','adultos']),
           cardEl('ic-naranja','','Maternidad e Infancia','Plan 1000 días · Controles gratuitos durante el embarazo y primeros años.',null,['ninez','adultos']),
         ])),
       ]),
@@ -2107,16 +2186,47 @@ function viewPrimerosAuxilios() {
   const tabs = h('div',{id:'pa-tabs'});
   // RCP
   const tabRcp = h('div',{class:'tab-panel active',id:'tab-rcp'});
-  tabRcp.appendChild(sectionTitle('RCP — Reanimación Cardiopulmonar','Adultos · seguí estos pasos'));
+  tabRcp.appendChild(sectionTitle('RCP — Reanimación Cardiopulmonar','La técnica cambia según la edad de quien necesita ayuda — buscá la sección correcta'));
+  tabRcp.appendChild(h('div',{class:'aviso aviso-info'},[h('span',{},'ℹ️'),h('div',{},'Estos pasos no reemplazan un curso de RCP presencial. Fuente: Ministerio de Salud de la Nación.')]));
+  tabRcp.appendChild(h('h4',{style:'margin:1.25rem 0 0.5rem;color:var(--primario);'},'👶 Bebés (menos de 1 año)'));
+  const rcpBebes = h('div',{class:'pa-steps'});
+  [['Verificar','Fijate si respira: observá si se mueve el pecho. Colocalo boca arriba sobre una superficie firme.'],
+   ['Pedir ayuda','Si no respira o no reacciona, pedile a alguien que llame al 107. Si estás solo, hacé 2 minutos de RCP antes de llamar vos.'],
+   ['Posición de las manos','Dos dedos (índice y medio) en el centro del pecho, entre los pezones — o rodealo con ambas manos y presioná con los pulgares.'],
+   ['Compresiones','30 compresiones seguidas, unos 4 cm de profundidad, a 100-120 por minuto.'],
+   ['Ventilaciones','Cubrí con tu boca la boca Y la nariz del bebé. 2 soplidos suaves de 1 segundo cada uno, que eleven apenas el pecho.'],
+   ['Continuar','Repetí el ciclo de 30 compresiones + 2 ventilaciones hasta que se mueva o llegue ayuda. No inclines demasiado su cabeza hacia atrás.']]
+   .forEach(([t,d],i)=>rcpBebes.appendChild(paStep(i+1,t,d)));
+  tabRcp.appendChild(rcpBebes);
+  tabRcp.appendChild(h('h4',{style:'margin:1.5rem 0 0.5rem;color:var(--primario);'},'🧒 Niños (1 a 8 años aprox.)'));
+  const rcpNinos = h('div',{class:'pa-steps'});
+  [['Verificar y pedir ayuda','Igual que en adultos: verificá que respire y pedí que llamen al 107.'],
+   ['Posición de las manos','El talón de una mano en el centro del pecho (dos manos si el niño es grande o mayor a 12 años).'],
+   ['Compresiones','30 compresiones de unos 5 cm de profundidad, a 100-120 por minuto.'],
+   ['Ventilaciones','Tapá la nariz con tus dedos y soplá 2 veces (1 segundo cada una) en la boca, con cuidado de no inclinar demasiado la cabeza.'],
+   ['Continuar','Alterná 30 compresiones y 2 ventilaciones hasta que llegue ayuda.']]
+   .forEach(([t,d],i)=>rcpNinos.appendChild(paStep(i+1,t,d)));
+  tabRcp.appendChild(rcpNinos);
+  tabRcp.appendChild(h('h4',{style:'margin:1.5rem 0 0.5rem;color:var(--primario);'},'🧑 Adultos y adolescentes'));
   const rcpSteps = h('div',{class:'pa-steps'});
   [['Verificar seguridad','Asegurate de que el entorno sea seguro para vos y la persona.'],['Verificar consciencia','Sacudí suavemente los hombros. "¿Estás bien?"'],['Llamar al 107','Pedí a alguien que llame. Si estás solo, hacelo vos y activá el altavoz.'],['Posición de las manos','Talón de la mano en el centro del pecho, otra mano encima, dedos entrelazados.'],['Compresiones','Presioná fuerte y rápido: 100-120 por minuto, 5-6 cm de profundidad. Dejá que el pecho suba.'],['Ventilaciones (si podés)','Cada 30 compresiones, 2 ventilaciones. Si no estás entrenado, solo compresiones.'],['Continuá','Hasta que llegue ayuda, la persona respire, o no puedas más.']].forEach(([t,d],i)=>rcpSteps.appendChild(paStep(i+1,t,d)));
   tabRcp.appendChild(rcpSteps);
   tabs.appendChild(tabRcp);
   // Atragantamiento
   const tabAtrag = h('div',{class:'tab-panel',id:'tab-atrag'});
-  tabAtrag.appendChild(sectionTitle('Atragantamiento','Maniobra de Heimlich'));
+  tabAtrag.appendChild(sectionTitle('Atragantamiento','La maniobra cambia según la edad — buscá la sección correcta'));
+  tabAtrag.appendChild(h('h4',{style:'margin:0.5rem 0 0.5rem;color:var(--primario);'},'👶 Bebés (menos de 1 año)'));
+  const atBebes = h('div',{class:'pa-steps'});
+  [['¿Llora o tose fuerte?','Si el bebé llora, tose fuerte o balbucea, dejalo intentar expulsarlo solo. No le golpees la espalda todavía.'],
+   ['Posición','Sentate y apoyalo boca abajo sobre tu antebrazo, con la cabeza más baja que el cuerpo, sosteniéndole la mandíbula.'],
+   ['5 golpes en la espalda','Con el talón de tu mano, entre los omóplatos.'],
+   ['5 compresiones en el pecho','Si no sale el objeto, girá al bebé boca arriba y hacé 5 compresiones en el centro del pecho, como en la RCP (nunca compresiones abdominales en bebés).'],
+   ['Alternar','Repetí golpes y compresiones hasta que salga el objeto o el bebé pierda el conocimiento — ahí iniciá RCP.']]
+   .forEach(([t,d],i)=>atBebes.appendChild(paStep(i+1,t,d)));
+  tabAtrag.appendChild(atBebes);
+  tabAtrag.appendChild(h('h4',{style:'margin:1.5rem 0 0.5rem;color:var(--primario);'},'🧒 Niños mayores de 1 año y adultos'));
   const atSteps = h('div',{class:'pa-steps'});
-  [['¿Puede toser?','Si puede toser, animalo a seguir tosiendo. No hagas nada más todavía.'],['Golpes en la espalda','5 golpes secos entre los omóplatos con el talón de la mano.'],['Maniobra de Heimlich','Parate detrás. Rodalo con los brazos. Puño justo arriba del ombligo. 5 compresiones hacia adentro y arriba.'],['Alternar','Alternará golpes y compresiones hasta que salga el objeto o la persona pierda el conocimiento.'],['Si pierde el conocimiento','Iniciá RCP inmediatamente. Antes de cada ventilación, revisá si ves el objeto en la boca.']].forEach(([t,d],i)=>atSteps.appendChild(paStep(i+1,t,d)));
+  [['¿Puede toser?','Si puede toser, animalo a seguir tosiendo. No hagas nada más todavía.'],['Golpes en la espalda','5 golpes secos entre los omóplatos con el talón de la mano.'],['Maniobra de Heimlich','Parate detrás. Rodalo con los brazos. Puño justo arriba del ombligo. 5 compresiones hacia adentro y arriba.'],['Alternar','Alterná golpes y compresiones hasta que salga el objeto o la persona pierda el conocimiento.'],['Si pierde el conocimiento','Iniciá RCP inmediatamente. Antes de cada ventilación, revisá si ves el objeto en la boca.']].forEach(([t,d],i)=>atSteps.appendChild(paStep(i+1,t,d)));
   tabAtrag.appendChild(atSteps);
   tabs.appendChild(tabAtrag);
   // ACV
@@ -2390,17 +2500,17 @@ function viewDonaciones() {
           cardEl('ic-rojo','','Hospital Garrahan','Donación de sangre pediátrica · Combate de los Pozos 1881.','https://www.garrahan.gov.ar'),
           cardEl('ic-rojo','','Hospital Italiano','Banco de sangre · Gascón 450, CABA.','https://www.hospitalitaliano.org.ar'),
           cardEl('ic-rojo','','Hospital Álvarez','Donación de sangre · Aranguren 2701, CABA.',null),
-          cardEl('ic-rojo','','Encontrá un banco cercano','Ministerio de Salud · Buscador nacional.','https://www.argentina.gob.ar/salud/donarsangre'),
+          cardEl('ic-rojo','','Encontrá un banco cercano','Ministerio de Salud · Buscador nacional.','https://www.argentina.gob.ar/salud/donarsangre/donde'),
         ]),
       ]),
       h('div',{class:'section-block'},[
         sectionTitle('Donación de órganos','INCUCAI — Instituto Nacional Central Único Coordinador'),
         h('div',{class:'aviso aviso-warn'},[h('span',{},'ℹ️'),h('div',{},'En Argentina, la Ley 27.447 establece que toda persona mayor de 18 años es donante, salvo que haya expresado lo contrario. Podés registrar tu voluntad en el INCUCAI.')]),
         h('div',{class:'grid-2'},[
-          cardEl('ic-azul','','Registrarse como donante','INCUCAI · Online o en el Registro Civil.','https://www.incucai.gov.ar'),
+          cardEl('ic-azul','','Registrarse como donante','INCUCAI · Online o en el Registro Civil.','https://www.argentina.gob.ar/salud/donarorganos'),
           cardEl('ic-azul','','Línea INCUCAI','0800-222-0101 · Gratuito · Consultas sobre donación.',null),
           cardEl('ic-verde','','Donación de plasma','Contactá el banco de sangre de tu hospital de referencia.',null),
-          cardEl('ic-verde','','Médula ósea','RENIMO · Registro Nacional de Donantes de Médula Ósea.','https://www.argentina.gob.ar/salud/renimo'),
+          cardEl('ic-verde','','Médula ósea','Registro Nacional de Donantes de Células Progenitoras Hematopoyéticas (INCUCAI).','https://www.argentina.gob.ar/donar-medula'),
         ]),
       ]),
       voluntariosInline('donaciones'),
@@ -2479,8 +2589,8 @@ function viewCentros() {
         h('div',{class:'grid-2'},[
           (()=>{ const c=h('div',{class:'centro-card'}); c.innerHTML='<h4>Hospitales y CeSAC — CABA</h4><p>35 hospitales + 54 Centros de Salud y Acción Comunitaria</p>'; const a=h('a',{href:'https://buenosaires.gob.ar/salud/establecimientos-hospitales-y-centros-de-salud',target:'_blank',rel:'noopener'},'Abrir mapa oficial'); c.appendChild(a); return c; })(),
           (()=>{ const c=h('div',{class:'centro-card'}); c.innerHTML='<h4>Vacunatorios — CABA</h4><p>Calendario de vacunación y centros disponibles</p>'; const a=h('a',{href:'https://buenosaires.gob.ar/salud/vacunas/calendario-de-vacunacion',target:'_blank',rel:'noopener'},'Ver vacunatorios'); c.appendChild(a); return c; })(),
-          (()=>{ const c=h('div',{class:'centro-card'}); c.innerHTML='<h4>Salud Mental — CABA</h4><p>Hospitales especializados y CeSAC con servicio de salud mental</p>'; const a=h('a',{href:'https://buenosaires.gob.ar/salud/hospitales/hospitales-de-salud-mental',target:'_blank',rel:'noopener'},'Ver centros'); c.appendChild(a); return c; })(),
-          (()=>{ const c=h('div',{class:'centro-card'}); c.innerHTML='<h4>Establecimientos nacionales</h4><p>Buscador de centros de salud en todo el país</p>'; const a=h('a',{href:'https://www.argentina.gob.ar/salud/establecimientos',target:'_blank',rel:'noopener'},'Buscar centros'); c.appendChild(a); return c; })(),
+          (()=>{ const c=h('div',{class:'centro-card'}); c.innerHTML='<h4>Salud Mental — CABA</h4><p>Hospitales especializados y CeSAC con servicio de salud mental</p>'; const a=h('a',{href:'https://buenosaires.gob.ar/gcaba_historico/salud/salud-mental/guardias-hospitalarias-de-salud-mental',target:'_blank',rel:'noopener'},'Ver centros'); c.appendChild(a); return c; })(),
+          (()=>{ const c=h('div',{class:'centro-card'}); c.innerHTML='<h4>Establecimientos nacionales</h4><p>Buscador de centros de salud en todo el país</p>'; const a=h('a',{href:'https://www.argentina.gob.ar/sssalud/base-datos',target:'_blank',rel:'noopener'},'Buscar centros'); c.appendChild(a); return c; })(),
         ]),
       ]),
       h('div',{class:'section-block'},[
@@ -3111,10 +3221,10 @@ function viewRecursosUtiles() {
   var tabTram = h('div',{class:'tab-panel',id:'tab-tramites'});
   tabTram.appendChild(sectionTitle('Trámites y gestiones','Cómo acceder a recursos del Estado'));
   var tramites = [
-    {t:'SUMAR — Cobertura sin obra social', d:'Registrarse en el programa de cobertura de salud para personas sin obra social. Se hace en el hospital o CAPS más cercano, con DNI.', link:'https://www.argentina.gob.ar/salud/sumar'},
+    {t:'SUMAR — Cobertura sin obra social', d:'Registrarse en el programa de cobertura de salud para personas sin obra social. Se hace en el hospital o CAPS más cercano, con DNI.', link:'https://www.argentina.gob.ar/salud/sumarmas'},
     {t:'PAMI — Jubilados y pensionados', d:'Cobertura integral para jubilados/as y pensionados/as. Tramitarse en cualquier delegación PAMI con DNI y recibo de haberes.', link:'https://www.pami.org.ar'},
     {t:'Historia clínica digital', d:'En CABA podés acceder a tu historia clínica digital a través de Mi Argentina o el portal de salud del GCBA.', link:'https://www.buenosaires.gob.ar/salud'},
-    {t:'Donación de órganos — INCUCAI', d:'Registrá tu voluntad de donar en incucai.gov.ar o en el Registro Civil. Es gratuito y online.', link:'https://www.incucai.gov.ar'},
+    {t:'Donación de órganos — INCUCAI', d:'Registrá tu voluntad de donar en incucai.gov.ar o en el Registro Civil. Es gratuito y online.', link:'https://www.argentina.gob.ar/salud/donarorganos'},
     {t:'Plan 1000 días — embarazo', d:'Programa nacional de acompañamiento para embarazadas y bebés. Consultá en tu CAPS o en argentina.gob.ar/salud', link:'https://www.argentina.gob.ar/salud/1000dias'},
   ];
   var tramGrid = h('div',{style:'display:flex;flex-direction:column;gap:0.75rem;'});
@@ -3256,7 +3366,7 @@ const searchIndex = [
   {t:'Donación de sangre · cómo donar · requisitos',s:'donaciones',tag:'Donaciones'},
   {t:'Banco de sangre · hospital · donde donar',s:'donaciones',tag:'Donaciones'},
   {t:'Donación órganos · INCUCAI · Ley 27.447',s:'donaciones',tag:'Donaciones'},
-  {t:'Plasma · médula ósea · RENIMO',s:'donaciones',tag:'Donaciones'},
+  {t:'Plasma · médula ósea · donantes',s:'donaciones',tag:'Donaciones'},
   {t:'Garrahan · donación sangre pediátrica',s:'donaciones',tag:'Donaciones'},
   // Centros / navegación
   {t:'Centros de atención · mapa hospitales',s:'centros',tag:'Centros'},
