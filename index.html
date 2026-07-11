@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AUXILIAR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a href="#main-content" class="skip-link">Saltar al contenido principal</a>
+
+<!-- HEADER -->
+<header class="app-header">
+  <div class="container app-header__inner">
+    <button class="logo-btn" onclick="navigate('/')" aria-label="AUXILIAR — Ir al inicio">
+      <div class="logo-flag" aria-hidden="true"><span></span><span></span><span></span></div>
+      <strong>Auxili<span class="logo-ar">AR</span></strong>
+    </button>
+
+    <!-- BÚSQUEDA COMPACTA -->
+    <div class="header-search">
+      <div class="header-search-wrap">
+        <span class="header-search-icon" aria-hidden="true">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="9" r="5"/><path d="M15 15l-3-3" stroke-linecap="round"/></svg>
+        </span>
+        <input class="header-search-input" id="headerSearchInput" type="search" placeholder="Buscar recursos..." autocomplete="off" aria-label="Buscar recursos">
+        <div class="header-search-results" id="headerSearchResults" role="listbox"></div>
+      </div>
+    </div>
+
+    <nav>
+      <ul class="nav-links" id="navLinks">
+        <li class="has-dropdown">
+          <a href="#" onclick="handleCategoriasClick(event, this)">Categorías ▾</a>
+          <div class="nav-dropdown">
+            <a href="#" onclick="event.preventDefault(); navigate('/categorias/salud-fisica')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="2" width="6" height="20" rx="3"/><rect x="2" y="9" width="20" height="6" rx="3"/></svg>Salud Física</a>
+            <a href="#" onclick="event.preventDefault(); navigate('/categorias/salud-mental')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3" stroke-linecap="round"/></svg>Salud Mental</a>
+            <a href="#" onclick="event.preventDefault(); navigate('/categorias/esi')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>ESI</a>
+            <a href="#" onclick="event.preventDefault(); navigate('/categorias/animales')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="2"/><circle cx="15" cy="7" r="2"/><circle cx="6" cy="14" r="2"/><circle cx="18" cy="14" r="2"/><ellipse cx="12" cy="18" rx="5" ry="3"/></svg>Animales</a>
+            <a href="#" onclick="event.preventDefault(); navigate('/categorias/emergencias')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17" stroke-width="3" stroke-linecap="round"/></svg>Emergencias</a>
+            <a href="#" onclick="event.preventDefault(); navigate('/categorias/donaciones')">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/><path d="M12 8v3"/><circle cx="12" cy="14" r="1" fill="currentColor"/></svg>Donaciones</a>
+          </div>
+        </li>
+        <li><a href="#" onclick="event.preventDefault(); navigate('/categorias/primeros-auxilios')">Primeros Auxilios</a></li>
+        <li><a href="#" onclick="event.preventDefault(); navigate('/centros')">Centros de Atención</a></li>
+        <li><a href="#" onclick="event.preventDefault(); navigate('/recursos-utiles')">Recursos útiles</a></li>
+        <li><a href="#" onclick="event.preventDefault(); navigate('/mi-salud')">Mi Salud</a></li>
+      </ul>
+    </nav>
+
+    <div class="header-actions">
+
+      <button class="hamburger" id="hamburger" aria-label="Abrir menú" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- BARRA EMERGENCIAS -->
+<div class="emg-bar" role="complementary" aria-label="Números de emergencia">
+  <strong>Emergencias:</strong>
+  <a href="tel:107" class="emg-btn">107 SAME</a><span class="emg-sep">·</span>
+  <a href="tel:911" class="emg-btn">911 Policía</a><span class="emg-sep">·</span>
+  <a href="tel:144" class="emg-btn">144 Violencia</a><span class="emg-sep">·</span>
+  <a href="tel:135" class="emg-btn">135 Crisis</a><span class="emg-sep">·</span>
+  <a href="tel:102" class="emg-btn">102 Niñez</a>
+</div>
+
+<main id="main-content">
+  <div id="app-outlet"></div>
+</main>
+
+<!-- PANEL ACCESIBILIDAD -->
+<button class="a11y-tab" id="a11yTab" onclick="toggleA11yPanel()" aria-label="Opciones de accesibilidad" aria-expanded="false">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+    <circle cx="12" cy="4" r="2"/><path d="M12 6v6m0 0l-3 3m3-3l3 3M9 12H6m6 0h3" stroke-linecap="round"/>
+    <path d="M8 22l2-6m4 6l-2-6" stroke-linecap="round"/>
+  </svg>
+  <span class="a11y-tab-label">AA</span>
+</button>
+
+<div class="a11y-panel-slide" id="a11yPanel" role="dialog" aria-label="Opciones de accesibilidad">
+  <button class="a11y-close" onclick="toggleA11yPanel()" aria-label="Cerrar panel">✕</button>
+  <div>
+    <h3>Accesibilidad</h3>
+  </div>
+  <div class="a11y-section">
+    <div class="a11y-section-label">Tema</div>
+    <div class="a11y-options">
+      <button class="a11y-opt" id="a11y-light" onclick="setTheme('light')">☀ Claro</button>
+      <button class="a11y-opt" id="a11y-dark" onclick="setTheme('dark')">☾ Oscuro</button>
+    </div>
+  </div>
+  <div class="a11y-section" id="a11y-contrast-section">
+    <div class="a11y-section-label">Alto contraste</div>
+    <div class="a11y-toggle-row" id="a11y-contrast-row">
+      <span>Activar alto contraste</span>
+      <button class="a11y-switch" id="a11y-contrast-sw" onclick="toggleContrast()" aria-pressed="false"></button>
+    </div>
+    <div id="a11y-contrast-disabled-note" style="display:none;font-size:0.78rem;color:var(--gris-medio);margin-top:6px;">
+      Solo disponible en modo oscuro.
+      <button onclick="setTheme('dark')" style="background:none;border:none;color:var(--primario);font-weight:700;font-size:0.78rem;cursor:pointer;text-decoration:underline;padding:0;font-family:var(--font-body);">Cambiar a oscuro</button>
+    </div>
+  </div>
+  <div class="a11y-section">
+    <div class="a11y-section-label">Tamaño de texto</div>
+    <div class="a11y-options">
+      <button class="a11y-opt" onclick="setTextSize(0.9)">A pequeño</button>
+      <button class="a11y-opt active" onclick="setTextSize(1)">A normal</button>
+      <button class="a11y-opt" onclick="setTextSize(1.35)">A grande</button>
+    </div>
+  </div>
+  <div class="a11y-section">
+    <div class="a11y-section-label">Espaciado entre líneas</div>
+    <div class="a11y-options">
+      <button class="a11y-opt" onclick="setLineSpacing(1.5)">Compacto</button>
+      <button class="a11y-opt active" onclick="setLineSpacing(1.7)">Normal</button>
+      <button class="a11y-opt" onclick="setLineSpacing(2.1)">Amplio</button>
+    </div>
+  </div>
+  <div class="a11y-section">
+    <div class="a11y-section-label">Lectura en voz alta</div>
+    <button class="a11y-opt" id="globalTtsBtn" onclick="ttsPageContent()" style="width:100%;justify-content:center;">🔊 Leer esta página</button>
+  </div>
+  <div class="a11y-section">
+    <button class="a11y-reset" onclick="resetA11y()">↺ Restablecer configuración visual</button>
+    <button class="a11y-reset" style="margin-top:6px;color:var(--rojo);border-color:var(--rojo-claro);" onclick="if(confirm('¿Borrar tu perfil guardado?')){clearUser();showToast('Perfil eliminado');renderRoute();}">✕ Borrar mi perfil</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="auxiToast" style="position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(20px);background:#1c1917;color:#ffffff;border-radius:50px;padding:8px 20px;font-size:0.82rem;font-weight:600;z-index:999;opacity:0;pointer-events:none;transition:opacity 0.2s,transform 0.2s;white-space:nowrap;box-shadow:var(--shadow-lg);"></div>
+
+<footer class="app-footer">
+  <strong style="font-family:Georgia,serif;font-weight:800;letter-spacing:-0.02em;">Auxili<em style="color:var(--primario-medio);font-style:italic;">AR</em></strong> — Recursos de salud gratuitos para Argentina<br>
+  <p style="margin:0.3rem 0 0;">AUXILIAR no reemplaza la atención médica ni psicológica profesional. Ante una emergencia, llamá al <strong>911</strong> o al <strong>107</strong>.<br>
+  Información verificada de fuentes oficiales · <a href="#" onclick="event.preventDefault();navigate('/sobre-auxiliar')">Sobre AUXILIAR</a></p>
+</footer>
+
+<script src="app.js" defer></script>
+</body>
+</html>
