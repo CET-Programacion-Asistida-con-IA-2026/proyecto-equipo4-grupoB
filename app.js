@@ -1921,7 +1921,7 @@ function viewSaludFisica() {
       h('div',{class:'section-block',id:'sec-vacunas'},[
         sectionTitle('Vacunas gratuitas','Calendario Nacional de Vacunación'),
         calLink('Calendario Nacional de Vacunación 2026','https://www.argentina.gob.ar/salud/vacunas','Ministerio de Salud · Gratuito · Sin orden médica · Todas las edades'),
-        calLink('Vacunatorios y horarios CABA','https://buenosaires.gob.ar/salud/vacunas/calendario-de-vacunacion','Gobierno de la Ciudad · Descargá el calendario y consultá los vacunatorios'),
+        calLink('Vacunatorios y horarios CABA','https://buenosaires.gob.ar/gcaba_historico/lugares-y-horarios-de-vacunatorios','Gobierno de la Ciudad · Descargá el calendario y consultá los vacunatorios'),
         h('div',{class:'table-wrap'},[
           h('table',{},[
             h('thead',{},[h('tr',{},[th('Vacuna'),th('Para quién'),th('Dónde'),th('Costo')])]),
@@ -1979,7 +1979,7 @@ function viewSaludMental() {
           hospCard('Hospital Tobar García','Psiquiatría · Infanto-juvenil (hasta 18 años)','Ramón Carrillo 315, CABA','4305-6108'),
           hospCard('CeSAC (54 en CABA)','Atención primaria · salud mental','Según tu barrio','Ver mapa GCBA'),
         ]),
-        (function(){ var cesacLink = mapaLink('Buscá un CeSAC cerca tuyo','https://buenosaires.gob.ar/salud/cesac','Red de 54 centros en toda la Ciudad · Turnos gratuitos · Atención psicológica'); cesacLink.style.marginTop = '10px'; return cesacLink; })(),
+        (function(){ var cesacLink = mapaLink('Buscá un CeSAC cerca tuyo','https://buenosaires.gob.ar/gcaba_historico/salud/salud-mental/guardias-hospitalarias-de-salud-mental','Más de 20 centros de salud mental en toda la Ciudad · Turnos gratuitos · Atención psicológica'); cesacLink.style.marginTop = '10px'; return cesacLink; })(),
       ]),
       h('div',{class:'section-block',id:'sec-salud-mental-edad'},[
         sectionTitle('Según tu etapa de vida'),
@@ -1993,7 +1993,7 @@ function viewSaludMental() {
         h('div',{class:'grid-2'},[
           cardEl('ic-azul','','Técnica 4-7-8 (respiración)','Inhalá 4 seg, retené 7, exhalá 8. Reduce la ansiedad en minutos.',null),
           cardEl('ic-verde','','Grounding 5-4-3-2-1','Nombrá 5 cosas que ves, 4 que tocás, 3 que oís, 2 que olés, 1 que saboreás.',null),
-          cardEl('ic-naranja','','Municipios Saludables','Programa nacional con recursos en todo el país.','https://www.argentina.gob.ar/salud/municipios'),
+          cardEl('ic-naranja','','Red de orientación y apoyo','Orientación y apoyo en la urgencia de Salud Mental, las 24hs, de alcance nacional','https://www.argentina.gob.ar/salud/hospitalbonaparte'),
           cardEl('ic-rojo','','SEDRONAR','Orientación en consumo problemático.','https://www.argentina.gob.ar/sedronar'),
         ]),
       ]),
@@ -2032,7 +2032,7 @@ function viewESI() {
         sectionTitle('Identidad y derechos'),
         h('div',{class:'grid-2'},[
           cardEl('ic-verde','','Identidad de género','Ley 26.743: cambio registral gratuito y sin requisitos médicos.',null),
-          cardEl('ic-azul','','INADI','Atención ante discriminación.','https://www.argentina.gob.ar/inadi'),
+          cardEl('ic-azul','','Asistencia y protección','Lineas y centros de atención las 24hs','https://www.argentina.gob.ar/justicia/proteccion-contra-toda-forma-de-violencia'),
         ]),
       ]),
       voluntariosInline('ESI y derechos'),
@@ -2063,7 +2063,7 @@ function viewESI() {
         sectionTitle('Identidad y derechos'),
         h('div',{class:'grid-2'},[
           cardEl('ic-verde','','Identidad de género','Ley 26.743: cambio registral gratuito y sin requisitos médicos.',null),
-          cardEl('ic-azul','','INADI','Atención ante discriminación por orientación o identidad.','https://www.argentina.gob.ar/inadi'),
+          cardEl('ic-azul','','Asistencia y protección','Lineas y centros de atención las 24hs','https://www.argentina.gob.ar/justicia/proteccion-contra-toda-forma-de-violencia'),
           cardEl('ic-naranja','','Violencia de género','Línea 144 · 24 hs · gratuita · confidencial.',null),
           cardEl('ic-rojo','','Asesoría legal gratuita','Consultorios jurídicos universitarios y defensorías del pueblo.',null),
         ]),
@@ -2092,7 +2092,7 @@ function viewAnimales() {
           cardEl('ic-naranja','','Centro Veterinario Costanera Sur','Av. Costanera Rafael Obligado s/n, CABA. Lunes a viernes.',null),
           cardEl('ic-naranja','','Centro Veterinario Villa Soldati','Llorente 2059, CABA. Lunes a viernes.',null),
           cardEl('ic-verde','','Móviles veterinarios CABA','Recorren distintos barrios. Consultá el cronograma semanal en el sitio del GCBA.',null),
-          cardEl('ic-azul','','Zoonosis CABA','Boyacá 501, CABA. Atención de mordeduras y enfermedades transmisibles.','https://buenosaires.gob.ar'),
+          cardEl('ic-azul','','Zoonosis CABA','Avenida Díaz Vélez 4821. Instituto Luis Pasteur. Prevención y control de enfermedades zoonóticas, con <strong>SERVICIOS VETERINARIOS Y PROGRAMAS DE SALUD PÚBLICA</strong>.','https://buenosaires.gob.ar/gcaba_historico/saludhospitales-y-establecimientos-de-salud/instituto-de-zoonosis-luis-pasteur'),
         ]),
       ]),
       h('div',{class:'section-block',id:'sec-vacunacion-animals'},[
@@ -3273,7 +3273,7 @@ function viewSobre() {
   const infoData = [
     {icon:'🎯',title:'¿Qué es AUXILIAR?',text:'AUXILIAR es una plataforma pensada para acompañar a personas que necesitan ayuda o desean ayudar, orientándolas paso a paso hacia recursos oficiales y gratuitos de salud, asistencia y orientación en Argentina.'},
     {icon:'📍',title:'Cobertura geográfica',text:'Priorizamos recursos de CABA e incluimos información del GBA, la Provincia de Buenos Aires y recursos de alcance nacional. La plataforma está en expansión continua.'},
-    {icon:'📋',title:'Fuentes de información',text:'La información proviene de fuentes oficiales: Ministerio de Salud de la Nación, GCBA, INCUCAI, SEDRONAR e INADI. Recomendamos verificar la vigencia antes de trasladarte.'},
+    {icon:'📋',title:'Fuentes de información',text:'La información proviene de fuentes oficiales: Ministerio de Salud de la Nación, GCBA, INCUCAI, SEDRONAR. Recomendamos verificar la vigencia antes de trasladarte.'},
     {icon:'🔒',title:'Privacidad y datos',text:'AUXILIAR no recopila datos personales ni utiliza cookies de seguimiento. El perfil de usuario se guarda únicamente en tu dispositivo y nunca se transmite a ningún servidor.'},
     {icon:'🤝',title:'¿Cómo colaborar?',text:'Si sos profesional de la salud, pertenecés a una organización o querés colaborar, podés hacerlo desde la sección "Sumate a Ayudar".'},
   ];
